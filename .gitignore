@@ -1,0 +1,17 @@
+node_modules/
+*.log
+.env
+.DS_Store
+
+# Keskeneräisten eräajojen checkpointit
+*.checkpoint.*
+
+# Omaha5:n luokkataulukon välimuisti (regeneroituu ajettaessa)
+omaha5-class-table.bin
+omaha5-classes.json
+
+# Sisäiset työdokumentit - eivät mukana julkisessa repossa
+docs/
+
+# Claude Code -projektiasetukset ja -skillit - paikallisia työvälineitä
+.claude/

@@ -1,0 +1,2489 @@
+/* ===== Design-tokenit =====
+   Sivun kaikki värit tulevat täältä. Tumma tila (:root[data-theme="dark"])
+   korvaa pelkät arvot, ei sääntöjä - siksi yhtään väriä ei saa kirjoittaa
+   suoraan sääntöihin, vaan aina var(--token). */
+
+:root {
+    color-scheme: light;
+
+    /* Pinnat */
+    --bg: #f4f4f4;
+    --surface: #ffffff;
+    --surface-2: #f9f9f9;
+    --surface-glass: rgba(255, 255, 255, 0.9);
+
+    /* Teksti */
+    --text: #333333;
+    --text-soft: #444444;
+    --text-muted: #555555;
+    --text-subtle: #666666;
+    /* Vaimeat sävyt on viritetty niin että ne yltävät WCAG AA:han
+       (4.5:1) sivun pinnoilla - #777 ja #7f8c8d jäivät juuri alle */
+    --text-faint: #737373;
+    --text-dim: #64706f;
+    --heading: #2c3e50;
+    /* Teksti tummalla pinnalla (pelaajaruudut, pöytä, tooltipit) ja
+       värillisellä pinnalla (napit, taulukon otsikot) */
+    --on-dark: #ffffff;
+    --on-accent: #ffffff;
+    --on-green: #ffffff;
+    /* Teksti käsijakauman palkissa: palkin värit tulevat JS:stä eivätkä
+       vaihdu teeman mukana, joten tämä pysyy valkoisena molemmissa */
+    --on-chart: #ffffff;
+
+    /* Reunat */
+    --border: #dddddd;
+    --border-strong: #cccccc;
+    --border-soft: #e0e0e0;
+
+    /* Sininen aksentti: napit, linkit, fokus */
+    --accent: #3498db;
+    --accent-strong: #2980b9;
+    /* Läpikuultavat aksenttitäytöt (navi, hover) - rgba, jotta sama arvo
+       toimii minkä tahansa pinnan päällä */
+    --accent-soft: rgba(52, 152, 219, 0.12);
+    --accent-soft-strong: rgba(52, 152, 219, 0.2);
+    /* Tummempi kuin nappien sininen: linkkiteksti yltää AA:han myös
+       navigaation hennolla aksenttitaustalla */
+    --link: #1b6698;
+    --focus: #2980b9;
+    --disabled: #95a5a6;
+
+    /* Napit */
+    --btn-secondary: #373439;
+    --btn-secondary-hover: #000000;
+    --btn-tertiary: #307e56;
+    --btn-tertiary-hover: #1f5137;
+    --btn-tertiary-disabled: #4ab67e;
+
+    /* Brändivihreä. --green on pinta (taulukon otsikko, valittu ruutu),
+       --green-text on teksti sivun taustaa vasten; tummassa tilassa nämä
+       eivät voi olla sama arvo. */
+    --green: #1e5c2c;
+    --green-text: #1e5c2c;
+    --green-hover: #2c7a3f;
+    --row-zebra: #f6f8f6;
+    --row-hover: #eef4ee;
+    --row-active: #e4efe4;
+    --chip-bg: #eef4ee;
+    --chip-hover: #ddeadd;
+    --chip-border: #b8d0b8;
+    --cell-bg: #f4f4f4;
+    --cell-bg-pair: #e9e9e9;
+    --cell-border: #e4e4e4;
+
+    /* Huomiolaatikot ja koodi */
+    --note-bg: #f8f8f4;
+    --note-border: #e4e4dc;
+    --code-bg: #eeeeee;
+    --info-bg: #eaf7ff;
+
+    /* Tilat */
+    --danger: #e74c3c;
+    --danger-text: #c0392b;
+    --warn: #e67e22;
+    --success: #2ecc71;
+    --success-deep: #27ae60;
+
+    /* Pokeripöytä */
+    --felt: #277553;
+
+    /* Korttien mitat. Oletus on pöydän kortti; .card-deck kasvattaa omansa.
+       Pöydän kokoa EI saa muuttaa tästä: script.js laskee pöydän säteen ja
+       korkeuden pelaajaruutujen mitoista, joten isompi kortti työntäisi
+       pelaajaruudut päällekkäin. */
+    --card-w: 40px;
+    --card-h: 60px;
+    --card-rank: 18px;
+    --card-suit: 25px;
+
+    /* Omaha5 pitää pöytäkortit pienempinä: viisi korttia yhdeksälle
+       pelaajalle vaatii 1154 px käytettävissä olevasta 1160 px:stä jo
+       näillä mitoilla, joten isompi kortti työntäisi pelaajaruudut
+       pöydän ulkopuolelle. Muissa pelimuodoissa tilaa on reilusti. */
+    --card-w-omaha5: 36px;
+    --card-h-omaha5: 54px;
+    --card-rank-omaha5: 16px;
+    --card-suit-omaha5: 22px;
+    --card-shadow: 0 1px 2px rgba(0, 0, 0, 0.12), 0 3px 6px rgba(0, 0, 0, 0.07);
+    --card-shadow-hover: 0 4px 8px rgba(0, 0, 0, 0.16), 0 10px 20px rgba(0, 0, 0, 0.12);
+
+    /* Kortit */
+    --card-face: #ffffff;
+    --card-face-2: #f0f0f0;
+    --card-face-red: #ffecec;
+    --card-edge: #dddddd;
+    --card-edge-on-felt: #ffffff;
+    --card-used-bg: #ececec;
+    --card-used-text: #b4b4b4;
+    --track-bg: #f0f0f0;
+    --track-empty: #eeeeee;
+
+    /* Maavärit kortin vaalealla pinnalla. --suit-black on 2-värisen pakan
+       pata ja risti; nelivärissä pata pysyy samana ja risti/ruutu saavat
+       omansa. Nämä eivät muutu tummassa tilassa, koska korttien etupuoli
+       pysyy vaaleana. */
+    --suit-black: #1a1a1a;
+    --suit-red: #e74c3c;
+    --suit-blue: #1387d4;
+    --suit-green: #09833c;
+
+    /* Maatunnukset paneelin pinnalla - nämä sen sijaan vaalenevat */
+    --label-black: #1a1a1a;
+    --label-red: #e74c3c;
+    --label-blue: #1387d4;
+    --label-green: #09833c;
+
+    /* Logon tausta tummassa tilassa (musta logo katoaisi muuten) */
+    --logo-plate: transparent;
+    --logo-plate-pad: 0;
+
+    /* Varjot */
+    --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.1);
+    --shadow-md: 0 4px 6px rgba(0, 0, 0, 0.1);
+    --shadow-lg: 0 0 10px rgba(0, 0, 0, 0.1);
+
+    /* Select-nuoli on data-URI, joten myös se on tokenina: tummassa
+       tilassa musta nuoli katoaisi taustaan */
+    --select-arrow: url("data:image/svg+xml;utf8,<svg fill='black' height='24' viewBox='0 0 24 24' width='24' xmlns='http://www.w3.org/2000/svg'><path d='M7 10l5 5 5-5z'/></svg>");
+}
+
+/* ===== Tumma tila =====
+   Vaihdetaan <html data-theme="dark"> -attribuutilla (js/theme.js).
+   Pelkkiä tokeniarvoja - jos jokin komponentti ei näytä oikealta tummana,
+   vika on siinä että se lukee väriä ohi tokenien.
+
+   Perusvalinta: korttien etupuoli pysyy vaaleana kuten oikeassa pakassa,
+   joten --card-* ja --suit-* eivät juuri muutu. Sen sijaan kaikki mikä on
+   kortin ulkopuolella tummenee. */
+
+:root[data-theme="dark"] {
+    color-scheme: dark;
+
+    --bg: #12161c;
+    --surface: #1a1f27;
+    --surface-2: #222933;
+    --surface-glass: rgba(26, 31, 39, 0.92);
+
+    --text: #e6eaf0;
+    --text-soft: #d3dae2;
+    --text-muted: #bcc6d2;
+    --text-subtle: #a7b2be;
+    --text-faint: #929daa;
+    --text-dim: #929daa;
+    --heading: #eef2f7;
+
+    --border: #2f3945;
+    --border-strong: #3b4654;
+    --border-soft: #2a323d;
+
+    /* Vaalea aksentti tummalla taustalla + tumma teksti sen päällä:
+       antaa napeille selvästi paremman kontrastin kuin valkoinen
+       vaalean sinisen päällä */
+    --accent: #7ab8e8;
+    --accent-strong: #9ccbf0;
+    --accent-soft: rgba(122, 184, 232, 0.14);
+    --accent-soft-strong: rgba(122, 184, 232, 0.24);
+    --on-accent: #0d1420;
+    --link: #7ab8e8;
+    --focus: #7ab8e8;
+    --disabled: #464f5b;
+
+    --btn-secondary: #3a4450;
+    --btn-secondary-hover: #4d596a;
+    --btn-tertiary: #2f7d55;
+    --btn-tertiary-hover: #3f9a6b;
+    --btn-tertiary-disabled: #2c4c3c;
+
+    --green: #2b7a43;
+    --green-text: #7fd39a;
+    --green-hover: #379254;
+    --row-zebra: #1e242c;
+    --row-hover: #26303a;
+    --row-active: #2a3a30;
+    --chip-bg: #1f2b23;
+    --chip-hover: #2a3a2f;
+    --chip-border: #35543f;
+    --cell-bg: #232b35;
+    --cell-bg-pair: #2b3440;
+    --cell-border: #333d49;
+
+    --note-bg: #1e232b;
+    --note-border: #2f3945;
+    --code-bg: #2a323d;
+    --info-bg: #16242e;
+
+    --danger: #e05a4a;
+    --danger-text: #ff8a7a;
+    --warn: #f0a04b;
+
+    --felt: #1d5a41;
+
+    /* Kortti hieman lämpimämpi kuin puhdas valkoinen: tummaa taustaa
+       vasten se erottuu pakaksi eikä hehkuvaksi laatikoksi */
+    --card-face: #fbfaf7;
+    --card-face-2: #eceae4;
+    --card-face-red: #f7e9e7;
+    --card-edge: #c9c6bf;
+    --card-used-bg: #464e58;
+    --card-used-text: #838c97;
+    --card-shadow: 0 1px 2px rgba(0, 0, 0, 0.4), 0 3px 8px rgba(0, 0, 0, 0.3);
+    --card-shadow-hover: 0 4px 10px rgba(0, 0, 0, 0.5), 0 12px 24px rgba(0, 0, 0, 0.4);
+    --track-bg: #262e38;
+    --track-empty: #262e38;
+
+    --label-black: #d7dde5;
+    --label-red: #ff6f60;
+    --label-blue: #58aeea;
+    --label-green: #45c274;
+
+    --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.5);
+    --shadow-md: 0 4px 10px rgba(0, 0, 0, 0.55);
+    --shadow-lg: 0 0 14px rgba(0, 0, 0, 0.6);
+
+    --logo-plate: #e9edf2;
+    --logo-plate-pad: 10px 18px;
+
+    --select-arrow: url("data:image/svg+xml;utf8,<svg fill='white' height='24' viewBox='0 0 24 24' width='24' xmlns='http://www.w3.org/2000/svg'><path d='M7 10l5 5 5-5z'/></svg>");
+}
+
+* {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+}
+
+html {
+    /* Varaa vierityspalkin tila aina, jottei sen ilmestyminen
+       siirrä keskitettyä sisältöä vaakasuunnassa */
+    scrollbar-gutter: stable;
+}
+
+body {
+    font-family: Arial, sans-serif;
+    line-height: 1.6;
+    color: var(--text);
+    background-color: var(--bg);
+    padding: 10px;
+}
+
+.container {
+    /* Leveämpi kuin ennen: Omaha5:n pelaajaruudut ovat 210 px leveitä ja
+       yhdeksän pelaajan pöytä tarvitsee reilut 1070 px. Kapeammilla
+       näytöillä width: 100% kutistaa tämän normaalisti. */
+    max-width: 1200px;
+    margin: 0 auto;
+    background: var(--surface);
+    padding: 20px;
+    border-radius: 8px;
+    box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+}
+
+h1 {
+    text-align: center;
+    margin-bottom: 20px;
+    color: var(--heading);
+}
+
+/* Kapealla ja keskileveällä näytöllä ryhmät kääriytyvät vapaasti
+   vasempaan reunaan. Leveällä näytöllä ne asettuvat neljännesleveyksiin
+   (ks. seuraava media query). */
+.settings {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px 40px;
+    margin-bottom: 20px;
+}
+
+/* Neljä asetusryhmää tasan neljänneksiin samalle riville.
+   Raja on 1024 px, koska pelimuodon valitsin vaatii 220 px: kapeammalla
+   näytöllä neljä sellaista saraketta ei mahtuisi vaan rivi vuotaisi yli. */
+@media (min-width: 1024px) {
+    .settings {
+        display: grid;
+        grid-template-columns: repeat(4, 1fr);
+        align-items: start;
+        gap: 12px 20px;
+    }
+
+    /* Väli tulee ruudukon gapista */
+    .settings .setting-group {
+        margin-bottom: 0;
+    }
+}
+
+.setting-group {
+    margin-bottom: 15px;
+}
+
+label {
+    display: block;
+    margin-bottom: 5px;
+    font-weight: bold;
+}
+
+select, input {
+    padding: 8px;
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    width: 100%;
+}
+
+.players-container {
+    margin-bottom: 20px;
+}
+
+.player-input {
+    background-color: rgba(0, 0, 0, 0.8);
+    padding: 8px;
+    border-radius: 6px;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.3);
+    text-align: center;
+}
+
+.player-input h3 {
+    margin-bottom: 3px;
+    color: var(--on-dark);
+    font-size: 12px;
+    text-shadow: 1px 1px 1px rgba(0, 0, 0, 0.5);
+}
+
+.card-inputs {
+    display: flex;
+    justify-content: center;
+    gap: 4px;
+    margin: 0 auto;
+}
+
+.card-input {
+    position: relative;
+}
+
+.card-input label {
+    position: absolute;
+    top: -25px;
+    left: 0;
+    color: var(--on-dark);
+    text-shadow: 1px 1px 1px rgba(0, 0, 0, 0.5);
+}
+
+.card-input input {
+    width: 100%;
+    padding: 8px;
+    border: 1px solid var(--border);
+    border-radius: 4px;
+}
+
+.actions {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 15px;
+    margin-bottom: 20px;
+    position: relative;
+    z-index: 3;
+    margin-top: 20px;
+}
+
+button {
+    background-color: var(--accent);
+    color: var(--on-accent);
+    border: none;
+    padding: 10px 20px;
+    cursor: pointer;
+    border-radius: 4px;
+    font-size: 16px;
+    transition: background-color 0.3s;
+}
+
+button:hover {
+    background-color: var(--accent-strong);
+}
+
+/* Näillä napeilla on oma tumma tai vahva taustansa, joten teksti pysyy
+   valkoisena myös tummassa tilassa - --on-accent on siellä tumma, koska
+   ensisijaisen napin sininen vaalenee. */
+button:disabled {
+    background-color: var(--disabled);
+    color: var(--on-dark);
+    cursor: not-allowed;
+}
+
+button.secondary-button {
+    background-color: var(--btn-secondary);
+    color: var(--on-dark);
+    margin-right: 10px;
+}
+
+button.secondary-button:hover {
+    background-color: var(--btn-secondary-hover);
+}
+
+button.tertiary-button {
+    background-color: var(--btn-tertiary);
+    color: var(--on-dark);
+    margin-right: 10px;
+}
+
+button.tertiary-button:hover {
+    background-color: var(--btn-tertiary-hover);
+}
+
+button.tertiary-button:disabled {
+    background-color: var(--btn-tertiary-disabled);
+    cursor: not-allowed;
+}
+
+/* Loading progress */
+.loading-progress {
+    margin-left: 5px;
+    font-weight: normal;
+}
+
+.loading-text {
+    font-weight: bold;
+}
+
+.loading {
+    display: flex;
+    align-items: center;
+    font-weight: bold;
+    color: var(--accent);
+}
+
+/* Piilotus ilman asettelun muutosta: tila pysyy varattuna, joten
+   elementin näyttäminen/piilottaminen ei liikuta muuta sisältöä */
+.invisible {
+    visibility: hidden;
+}
+
+/* Ilmoitukset simulaation tilasta (esim. fallback Monte Carloon).
+   Kiinteä minimikorkeus, jotta ilmoituksen ilmestyminen ei hypäytä sivua. */
+.simulation-notice {
+    text-align: center;
+    color: var(--warn);
+    font-size: 14px;
+    min-height: 21px;
+    margin-bottom: 15px;
+    position: relative;
+    z-index: 3;
+}
+
+.results-container {
+    margin-top: 30px;
+}
+
+.text-results {
+    margin-bottom: 20px;
+    line-height: 1.8;
+}
+
+.chart-container {
+    height: 400px;
+}
+
+.player-result {
+    padding: 10px;
+    margin-bottom: 5px;
+    border-radius: 4px;
+    background-color: var(--surface-2);
+}
+
+.card {
+    display: inline-block;
+    padding: 2px 6px;
+    margin: 0 2px;
+    border-radius: 3px;
+    font-weight: bold;
+    background-color: var(--card-face);
+    border: 1px solid var(--card-edge);
+    box-shadow: 1px 1px 2px rgba(0,0,0,0.1);
+}
+
+.card.spades, .card.clubs {
+    background-color: var(--card-face-2);
+    color: var(--suit-black);
+}
+
+.card.hearts, .card.diamonds {
+    background-color: var(--card-face-red);
+    color: var(--suit-red);
+}
+
+.instructions {
+    background-color: var(--info-bg);
+    padding: 10px;
+    margin-bottom: 20px;
+    border-radius: 5px;
+    font-size: 0.9em;
+}
+
+/* ===== Korttipakka ===== */
+
+.card-deck-container {
+    margin-bottom: 70px;
+    padding: 18px 20px 22px;
+    background-color: var(--surface-2);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    box-shadow: var(--shadow-sm);
+}
+
+/* Otsikko vasemmalle, pakan värivalitsin oikealle: valitsin koskee
+   nimenomaan tätä pakkaa, joten se kuuluu tänne eikä sivun asetusriville */
+.deck-header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 16px 24px;
+    margin-bottom: 18px;
+}
+
+.card-deck-container h3 {
+    margin-bottom: 4px;
+    color: var(--heading);
+}
+
+.deck-instructions {
+    margin: 0;
+    font-size: 0.9em;
+    color: var(--text-dim);
+}
+
+.deck-header .deck-color-selection {
+    margin-left: 0;
+    margin-bottom: 0;
+    flex-shrink: 0;
+}
+
+/* Yksi ruudukko koko pakalle: maatunnus omassa sarakkeessaan ja kortit
+   13 sarakkeessa, jolloin rivit pysyvät kohdakkain. .suit-row jää DOMiin
+   ruudunlukijan ryhmittelyksi mutta luovuttaa asettelun ruudukolle. */
+.card-deck {
+    /* Pakan kortit ovat pöydän kortteja isompia, joten arvo ja maa
+       mahtuvat isommalla kuin pöydän 16/22 px */
+    --card-w: 46px;
+    --card-h: 66px;
+    --card-rank: 20px;
+    --card-suit: 28px;
+
+    display: grid;
+    grid-template-columns: auto repeat(13, auto);
+    justify-content: center;
+    align-items: center;
+    gap: 10px 7px;
+    margin-bottom: 4px;
+}
+
+.suit-row {
+    display: contents;
+}
+
+.suit-label {
+    width: 34px;
+    text-align: center;
+    font-weight: bold;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 26px;
+    line-height: 1;
+}
+
+/* Maatunnusten värit. Omat --label-*-tokenit korttien --suit-*-tokenien
+   sijaan, koska tunnus on paneelin pinnalla eikä vaalealla kortilla:
+   tummassa tilassa musta pata katoaisi taustaan. */
+.suit-label.suit-s,
+.suit-label.suit-c {
+    color: var(--label-black);
+}
+
+.suit-label.suit-h,
+.suit-label.suit-d {
+    color: var(--label-red);
+}
+
+.card-deck.fourcolor .suit-label.suit-d {
+    color: var(--label-blue);
+}
+
+.card-deck.fourcolor .suit-label.suit-c {
+    color: var(--label-green);
+}
+
+/* Kortin etupuoli. Mitat tulevat --card-*-muuttujista, jotka pakka
+   kasvattaa omikseen; pöydän kortit käyttävät :root-oletusta, koska
+   script.js johtaa pöydän säteen pelaajaruutujen mitoista. */
+.deck-card,
+.dropped-card {
+    position: relative;
+    width: var(--card-w);
+    height: var(--card-h);
+    border: none;
+    border-radius: 5px;
+    background-color: var(--card-face);
+    font-weight: bold;
+    user-select: none;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    gap: 2px;
+    /* Sisäkehys varjon osana: kortissa on ohut reuna ilman että se
+       syö laatikon mittoja */
+    box-shadow:
+        inset 0 0 0 1px var(--card-edge),
+        var(--card-shadow);
+}
+
+.deck-card .rank,
+.dropped-card .rank {
+    font-size: var(--card-rank);
+    line-height: 1;
+}
+
+.deck-card .suit,
+.dropped-card .suit {
+    font-size: var(--card-suit);
+    line-height: 1;
+}
+
+.deck-card {
+    cursor: grab;
+    transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+
+.deck-card:hover {
+    transform: translateY(-4px);
+    box-shadow:
+        inset 0 0 0 1px var(--card-edge),
+        var(--card-shadow-hover);
+    /* Nostettu kortti naapureiden päälle */
+    z-index: 2;
+}
+
+.deck-card:active {
+    transform: translateY(-1px);
+    cursor: grabbing;
+}
+
+/* Raahattava kortti himmenee lähtöpaikallaan */
+.deck-card.dragging {
+    opacity: 0.4;
+    transform: none;
+}
+
+.deck-card.spades, .deck-card.clubs {
+    color: var(--suit-black);
+}
+
+.deck-card.hearts, .deck-card.diamonds {
+    color: var(--suit-red);
+}
+
+/* Käytetty kortti: oma vaimea pinta ja teksti, ei opacityä - läpikuultavuus
+   sulauttaisi kortin taustaan niin ettei enää näkisi mikä kortti on poissa */
+.deck-card.used,
+.deck-card.used:hover {
+    cursor: not-allowed;
+    background-color: var(--card-used-bg);
+    color: var(--card-used-text);
+    transform: none;
+    box-shadow: inset 0 0 0 1px var(--card-edge);
+}
+
+/* Standard two-color mode - update club color */
+.deck-card.clubs, .dropped-card.clubs {
+    color: var(--suit-black);
+}
+
+/* Four-color deck styles */
+.deck-card.spades.fourcolor,
+.dropped-card.spades.fourcolor {
+    color: var(--suit-black);
+}
+
+.deck-card.hearts.fourcolor,
+.dropped-card.hearts.fourcolor {
+    color: var(--suit-red);
+}
+
+.deck-card.diamonds.fourcolor,
+.dropped-card.diamonds.fourcolor {
+    color: var(--suit-blue);
+}
+
+.deck-card.clubs.fourcolor,
+.dropped-card.clubs.fourcolor {
+    color: var(--suit-green);
+}
+
+/* Card drop zones styling */
+.card-drop-zone {
+    position: relative;
+    width: var(--card-w);
+    height: var(--card-h);
+    border: 2px dashed rgba(255, 255, 255, 0.5);
+    border-radius: 4px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    background-color: rgba(255, 255, 255, 0.2);
+    transition: all 0.2s;
+}
+
+.card-drop-zone:first-child,
+.card-drop-zone:last-child {
+    position: relative;
+    left: auto;
+    z-index: auto;
+}
+
+.card-drop-zone.hover {
+    border-color: var(--accent);
+    background-color: rgba(52, 152, 219, 0.3);
+}
+
+.card-drop-zone.filled {
+    border-style: solid;
+    border-color: transparent;
+    background-color: transparent;
+}
+
+/* Pöydälle jaettu kortti: sama etupuoli kuin pakassa, mutta vihreää
+   verkaa vasten vaalea reuna ja jyrkempi varjo */
+.dropped-card {
+    box-shadow:
+        inset 0 0 0 1px var(--card-edge-on-felt),
+        2px 2px 5px rgba(0, 0, 0, 0.35);
+}
+
+.dropped-card.spades, .dropped-card.clubs {
+    color: var(--suit-black);
+}
+
+.dropped-card.hearts, .dropped-card.diamonds {
+    color: var(--suit-red);
+}
+
+.remove-card {
+    position: absolute;
+    top: -8px;
+    right: -8px;
+    width: 18px;
+    height: 18px;
+    background-color: var(--danger);
+    color: var(--on-dark);
+    border-radius: 50%;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    font-size: 12px;
+    cursor: pointer;
+    line-height: 1;
+    /* Piilotus opacityllä eikä visibilityllä: visibility: hidden estäisi
+       fokuksen, jolloin nappia ei voisi käyttää näppäimistöllä */
+    opacity: 0;
+}
+
+.card-drop-zone:hover .remove-card,
+.remove-card:focus-visible {
+    opacity: 1;
+}
+
+/* Remove the ::after pseudo-elements that were not working properly */
+.deck-card.spades::after,
+.deck-card.hearts::after,
+.deck-card.diamonds::after,
+.deck-card.clubs::after,
+.dropped-card.spades::after,
+.dropped-card.hearts::after,
+.dropped-card.diamonds::after,
+.dropped-card.clubs::after {
+    content: none;
+}
+
+/* Poker table styling - updated to show only green felt */
+/* HUOM: työpöydällä script.js asettaa max-widthin ja korkeuden pelaajien
+   sijoittelusta johdettuna (2*sade + ruudun mitat), joten nama arvot
+   patevat vain ennen sita ja mobiilissa. Ala viilaa naita jos pelaajaruudut
+   eivat mahdu - korjaa sadelaskenta script.js:ssa. */
+.poker-table-container {
+    position: relative;
+    width: 100%;
+    max-width: 900px;
+    height: 540px;
+    margin: 0 auto 80px;
+}
+
+.poker-table {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 100%;
+    height: 100%;
+    background-color: var(--felt);
+    border-radius: 10px;
+    box-shadow: inset 0 0 30px rgba(0, 0, 0, 0.5);
+    z-index: 1;
+}
+
+/* Pelaajaruudun leveys tulee script.js:stä (seatWidth), koska sama luku
+   tarvitaan siellä pöydän säteen laskentaan. Tämä on vain varamitta ennen
+   kuin JS ehtii asettaa sen - älä muuta tätä yksin, vaan script.js:n
+   SEAT_WIDTH-taulukkoa. */
+.player-position {
+    position: absolute;
+    width: 104px;
+    z-index: 2;
+    transform-origin: center;
+}
+
+/* Player result display on poker table */
+.player-stats {
+    margin-top: 5px;
+    color: var(--on-dark);
+    font-size: 11px;
+    background-color: rgba(0, 0, 0, 0.6);
+    border-radius: 3px;
+    padding: 3px 5px;
+    text-align: left;
+    opacity: 0;
+    transition: opacity 0.5s;
+    width: 100%;
+}
+
+.player-stats.visible {
+    opacity: 1;
+}
+
+.player-stats .stat-row {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 2px;
+}
+
+.player-stats .label {
+    font-weight: normal;
+}
+
+.player-stats .value {
+    font-weight: bold;
+}
+
+/* Virhemarginaali ja tarkka arvo: alisteisia rivejä, jotta simulaation tulos
+   pysyy pääasiana. Omat rivinsä siksi, että kapeassa tilastoruudussa
+   "35.10% ± 0.21" rivittyisi keskeltä ja näyttäisi rikkinäiseltä. */
+.player-stats .aux-row {
+    opacity: 0.75;
+    font-size: 0.92em;
+}
+
+.player-stats .aux-row .value {
+    font-weight: normal;
+}
+
+/* Arvot eivät saa katketa kesken luvun */
+.player-stats .stat-row .value {
+    white-space: nowrap;
+}
+
+/* Mini progress bar for win probability */
+.mini-progress-container {
+    height: 4px;
+    background-color: rgba(255, 255, 255, 0.2);
+    border-radius: 2px;
+    margin-top: 2px;
+    overflow: hidden;
+}
+
+.mini-progress-bar {
+    /* Aloitusleveys CSS:ssä eikä style-attribuuttina: helmetin
+       style-src 'self' estää inline-tyylit, jolloin selain kirjaisi
+       CSP-virheen jokaisesta luodusta pelaajaruudusta */
+    width: 0;
+    height: 100%;
+    background: linear-gradient(to right, var(--success-deep), var(--success));
+    border-radius: 2px;
+    transition: width 0.5s;
+}
+
+/* Community cards styling - updated for better visibility */
+.community-cards {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    z-index: 2;
+    align-items: center;
+}
+
+.community-cards-row {
+    display: flex;
+    justify-content: center;
+    gap: 5px;
+    align-items: flex-end;
+}
+
+.section-container {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 5px;
+}
+
+.community-label {
+    color: var(--on-dark);
+    font-size: 11px;
+    text-align: center;
+    margin-bottom: 2px;
+    text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.7);
+}
+
+.flop-container {
+    display: flex;
+    gap: 6px;
+}
+
+/* Make community drop zones match card drop zones */
+.community-drop-zone {
+    position: relative;
+    width: var(--card-w);
+    height: var(--card-h);
+    border: 2px dashed rgba(255, 255, 255, 0.7);
+    border-radius: 4px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    background-color: rgba(255, 255, 255, 0.2);
+    transition: all 0.2s;
+}
+
+.community-drop-zone.hover {
+    border-color: var(--accent);
+    background-color: rgba(52, 152, 219, 0.3);
+}
+
+.community-drop-zone.filled {
+    border-style: solid;
+    border-color: transparent;
+    background-color: transparent;
+}
+
+.community-drop-zone:hover .remove-card {
+    opacity: 1;
+}
+
+/* Väli tulee .settings-ruudukon gapista, ei omasta marginaalista */
+
+/* Radio group base styles - KORJATTU */
+.radio-group {
+    display: flex;
+    border-radius: 6px;
+    padding: 3px;
+    position: relative;
+    background-color: var(--track-bg);
+    box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.1);
+    height: 40px;
+    min-width: 160px;
+}
+
+/* Radio labels - tasalevyiset ja keskitetyt */
+.radio-label {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    font-weight: normal;
+    padding: 6px 8px;
+    border-radius: 4px;
+    position: relative;
+    z-index: 1;
+    transition: color 0.3s;
+    text-align: center;
+    white-space: nowrap;
+    margin-bottom: 0;
+    font-size: 14px;
+}
+
+.radio-label input[type="radio"] {
+    position: absolute;
+    opacity: 0;
+    width: 0;
+    height: 0;
+}
+
+.radio-label span {
+    display: block;
+    text-align: center;
+    width: 100%;
+}
+
+.radio-label input[type="radio"]:checked + span {
+    color: var(--on-accent);
+    font-weight: bold;
+}
+
+/* Background highlight for 2-option groups */
+.background-highlight {
+    position: absolute;
+    z-index: 0;
+    top: 3px;
+    left: 3px;
+    height: calc(100% - 6px);
+    width: calc(50% - 3px);
+    background: var(--accent);
+    border-radius: 4px;
+    transition: transform 0.3s ease;
+}
+
+.radio-group.second-checked .background-highlight {
+    transform: translateX(100%);
+}
+
+/* Game type group - 3 options */
+.radio-group.game-type-group {
+    min-width: 220px;
+}
+
+.radio-group.game-type-group .background-highlight {
+    width: calc(33.33% - 2px);
+}
+
+.radio-group.game-type-group.second-checked .background-highlight {
+    transform: translateX(100%);
+}
+
+.radio-group.game-type-group.third-checked .background-highlight {
+    transform: translateX(200%);
+}
+
+
+/* Player shuffle button styles */
+.player-shuffle-button {
+    position: absolute;
+    right: -24px;
+    top: 25%;
+    transform: translateY(-50%);
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    background-color: rgba(255, 255, 255, 0.2);
+    border: none;
+    cursor: pointer;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    padding: 0;
+    transition: background-color 0.3s ease;
+}
+
+.player-shuffle-button:hover {
+    background-color: rgba(255, 255, 255, 0.3);
+}
+
+.player-shuffle-button svg {
+    width: 16px;
+    height: 16px;
+    fill: rgba(255, 255, 255, 0.8);
+}
+
+/* Player fold button styles */
+.player-fold-button {
+    position: absolute;
+    right: -24px;
+    top: 75%;
+    transform: translateY(-50%);
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    background-color: rgba(231, 76, 60, 0.5);
+    border: none;
+    cursor: pointer;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    padding: 0;
+    transition: background-color 0.3s ease;
+}
+
+.player-fold-button:hover {
+    background-color: rgba(231, 76, 60, 0.7);
+}
+
+.player-fold-button svg {
+    width: 16px;
+    height: 16px;
+    fill: rgba(255, 255, 255, 0.8);
+}
+
+/* Folded state styling */
+.player-input.folded {
+    opacity: 0.5;
+    pointer-events: none;
+}
+
+.player-input.folded .player-shuffle-button,
+.player-input.folded .player-fold-button {
+    pointer-events: auto;
+}
+
+.player-input.folded .player-fold-button {
+    background-color: rgba(46, 204, 113, 0.5);
+}
+
+.player-input.folded .player-fold-button:hover {
+    background-color: rgba(46, 204, 113, 0.7);
+}
+
+/* Board shuffle button specific styles */
+.board-shuffle {
+    right: -30px;
+    top: 50px;
+    background-color: rgba(255, 255, 255, 0.3);
+}
+
+.board-shuffle:hover {
+    background-color: rgba(255, 255, 255, 0.4);
+}
+
+/* Add styling for the separate shuffle button container */
+.shuffle-button-container {
+    display: flex;
+    justify-content: center;
+    margin-left: 10px;
+    align-items: center;
+}
+
+/* Logo styling */
+.site-header {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    margin-bottom: 30px;
+    justify-content: center;
+    text-align: center;
+}
+
+.logo-container {
+    margin-right: 0;
+    margin-bottom: 15px;
+}
+
+.site-logo {
+    height: 80px;
+    width: auto;
+}
+
+/* Ylätason logon tyylit. Logo on kaikilla sivuilla linkki etusivulle
+   (englanninkielisillä /en/-etusivulle). */
+.main-logo-link {
+    display: inline-block;
+    line-height: 0;          /* linkki ei kasvata kuvan alle tyhjää tilaa */
+    border-radius: 22px;     /* focus-rengas seuraa logolaatan pyöristystä */
+}
+
+.main-logo-link:focus-visible {
+    outline: 2px solid var(--focus);
+    outline-offset: 2px;
+}
+
+.main-logo-container {
+    display: flex;
+    justify-content: center;
+    margin-bottom: 20px;
+    margin-top: 10px;
+    text-align: center;
+}
+
+/* Logo on musta läpinäkyvällä taustalla, joten tummassa tilassa se
+   katoaisi. Vaalea "pelimerkki" sen alle pitää brändivärit koskemattomina.
+   content-box: täyte kasvaa ulospäin, jolloin itse kuva on molemmissa
+   teemoissa täsmälleen saman kokoinen. */
+.main-logo {
+    box-sizing: content-box;
+    height: 80px;
+    width: auto;
+    background: var(--logo-plate);
+    padding: var(--logo-plate-pad);
+    border-radius: 22px;
+}
+
+/* Hero Stats Bar styles */
+/* Aina näkyvissä kiinteän kokoisena, jottei tulosten ilmestyminen
+   hypäytä asettelua. Tyhjä palkki (--track-empty) toimii placeholderina. */
+.hero-stats-container {
+    width: 100%;
+    max-width: 1000px;
+    margin: 20px auto 0 auto;
+    padding: 10px;
+    background: var(--surface-glass);
+    border-radius: 8px;
+    box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+}
+
+.hero-stats-title {
+    text-align: center;
+    font-weight: bold;
+    margin-bottom: 8px;
+    font-size: 14px;
+    text-transform: uppercase;
+    color: var(--text);
+}
+
+.hero-bar-track {
+    display: flex;
+    width: 100%;
+    height: 30px;
+    border-radius: 0;
+    overflow: visible;
+    background: var(--track-empty);
+    position: relative;
+}
+
+.hero-bar-segment {
+    height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    /* Segmenttien taustavärit tulevat script.js:n käsipaletista eivätkä
+       vaihdu teeman mukana, joten tekstin on pysyttävä valkoisena */
+    color: var(--on-chart);
+    font-size: 11px;
+    font-weight: bold;
+    white-space: nowrap;
+    transition: width 0.8s ease-out;
+    cursor: help;
+    position: relative;
+}
+
+.hero-bar-segment:hover::after {
+    content: attr(data-tooltip);
+    position: absolute;
+    bottom: 100%;
+    left: 50%;
+    transform: translateX(-50%);
+    background-color: rgba(0, 0, 0, 0.85);
+    color: var(--on-dark);
+    padding: 5px 10px;
+    border-radius: 4px;
+    font-size: 12px;
+    white-space: nowrap;
+    z-index: 100;
+    margin-bottom: 8px;
+    pointer-events: none;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+}
+
+.hero-bar-segment:hover::before {
+    content: '';
+    position: absolute;
+    bottom: 100%;
+    left: 50%;
+    transform: translateX(-50%);
+    border-width: 5px;
+    border-style: solid;
+    border-color: rgba(0, 0, 0, 0.85) transparent transparent transparent;
+    margin-bottom: -2px;
+    z-index: 100;
+    pointer-events: none;
+}
+
+.hero-stats-legend {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 15px;
+    margin-top: 10px;
+    font-size: 12px;
+}
+
+.legend-item {
+    display: flex;
+    align-items: center;
+}
+
+.legend-dot {
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    margin-right: 5px;
+}
+
+/* Style for disabled/randomized opponents */
+.player-input.random-opponent {
+    opacity: 0.6;
+    pointer-events: none;
+    filter: grayscale(0.8);
+    position: relative;
+}
+
+.player-input.random-opponent::after {
+    content: '?';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    font-size: 40px;
+    color: var(--on-dark);
+    font-weight: bold;
+    text-shadow: 0 0 10px black;
+    z-index: 10;
+}
+
+/* Omaha 5 card inputs - käytä samaa kokoa kuin muut kortit */
+.card-inputs.omaha5 {
+    display: flex;
+    justify-content: center;
+    gap: 3px;
+}
+
+/* Poker table container for omaha5 (vain lahtoarvo - katso yllaoleva huomio) */
+.poker-table-container.omaha5-mode {
+    /* Pienemmät kortit koko pöydälle, myös laudalle - katso perustelu
+       --card-w-omaha5:n kohdalta */
+    --card-w: var(--card-w-omaha5);
+    --card-h: var(--card-h-omaha5);
+    --card-rank: var(--card-rank-omaha5);
+    --card-suit: var(--card-suit-omaha5);
+    max-width: 950px;
+    height: 580px;
+}
+
+/* Mobile-friendly style for logo */
+@media (max-width: 767px) {
+    .main-logo {
+        height: 60px;
+    }
+}
+
+/* Mobile-friendly styles */
+@media (max-width: 767px) {
+    /* Container adjustments */
+    .container {
+        padding: 10px;
+        margin: 0;
+    }
+    
+    /* Settings panel adjustments */
+    .settings {
+        flex-direction: column;
+    }
+    
+    .setting-group {
+        width: 100%;
+        margin-bottom: 8px;
+        margin-left: 0 !important;
+    }
+    
+    /* Radio group mobile adjustments */
+    .radio-group {
+        width: 100%;
+        min-width: unset;
+    }
+    
+    .radio-group.game-type-group {
+        min-width: unset;
+    }
+    
+    .radio-label {
+        font-size: 13px;
+        padding: 6px 4px;
+    }
+    
+    /* Card deck container adjustments */
+    .card-deck-container {
+        margin-bottom: 20px;
+        padding: 12px;
+    }
+
+    .deck-header {
+        margin-bottom: 12px;
+    }
+
+    /* Kaikki 13 korttia ei mahdu riville, joten maa jaetaan kahdelle
+       riville. Jokainen maa saa tässä oman ruudukkonsa: yhdessä isossa
+       ruudukossa automaattisijoittelun kursori ei palaa rivin alkuun, vaan
+       seuraavan maan tunnus valuisi edellisen rivin loppuun. Maatunnus vie
+       sarakkeen 1 molemmilta riveiltä, jolloin kortit menevät sarakkeisiin
+       2-8 eivätkä tunnuksen alle. */
+    .card-deck {
+        --card-w: 38px;
+        --card-h: 54px;
+        --card-rank: 16px;
+        --card-suit: 22px;
+
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+    }
+
+    .suit-row {
+        display: grid;
+        grid-template-columns: auto repeat(7, 1fr);
+        justify-items: center;
+        align-items: center;
+        gap: 5px 4px;
+    }
+
+    .suit-label {
+        grid-row: span 2;
+        width: 24px;
+        font-size: 22px;
+    }
+    
+    /* Poker table adjustments */
+    .poker-table-container {
+        height: auto;
+        position: relative;
+        margin-bottom: 20px;
+        padding-bottom: 0px;
+        overflow: visible;
+    }
+    
+    .poker-table {
+        height: 180px;
+        transform: translate(-50%, 0%);
+    }
+    
+    /* Community cards positioning adjustments */
+    .community-cards {
+        position: absolute;
+        bottom: 20px;
+        width: 100%;
+        z-index: 10;
+    }
+    
+    /* Mobile-specific layout for poker table */
+    .mobile-layout .poker-table-container {
+        display: block !important;
+        position: relative;
+        height: auto;
+        margin-bottom: 0;
+    }
+    
+    /* Contain the poker table and ensure it doesn't overlap */
+    .mobile-layout .poker-table {
+        position: relative;
+        height: 150px;
+        margin-bottom: 10px;
+        margin-top: 20px;
+    }
+    
+    /* Position community cards within the table */
+    .mobile-layout .community-cards {
+        position: absolute;
+        top: 50%;
+        left: 0;
+        right: 0;
+        transform: translateY(-100%);
+    }
+    
+    /* Create a separate container for players below the table */
+    .mobile-layout .poker-table-container::after {
+        content: '';
+        display: block;
+        height: 15px;
+        border-bottom: 1px solid rgba(255,255,255,0.2);
+        margin-bottom: 10px;
+    }
+    
+    /* Mobile players container - vertical layout */
+    .mobile-layout .player-position {
+        position: static !important;
+        transform: none !important;
+        width: 100% !important;
+        margin: 5px 0 !important;
+        display: block;
+        top: auto !important;
+        left: auto !important;
+    }
+    
+    /* Player card layout for mobile */
+    .mobile-layout .player-input {
+        display: flex;
+        flex-direction: row;
+        justify-content: space-between;
+        align-items: center;
+        width: 100%;
+        padding: 6px;
+        margin: 0;
+        background-color: var(--felt);
+    }
+    
+    /* Fix player number display */
+    .mobile-layout .player-input::before {
+        content: attr(data-player-index);
+        position: absolute;
+        left: 5px;
+        top: 50%;
+        transform: translateY(-50%);
+        font-size: 10px;
+        font-weight: bold;
+        color: var(--on-dark);
+        width: 15px;
+        text-align: center;
+    }
+    
+    /* Adjust the player index to display as human-readable number */
+    .mobile-layout .player-input[data-player-index="0"]::before { content: ""; }
+    .mobile-layout .player-input[data-player-index="1"]::before { content: ""; }
+    .mobile-layout .player-input[data-player-index="2"]::before { content: ""; }
+    .mobile-layout .player-input[data-player-index="3"]::before { content: ""; }
+    .mobile-layout .player-input[data-player-index="4"]::before { content: ""; }
+    .mobile-layout .player-input[data-player-index="5"]::before { content: ""; }
+    .mobile-layout .player-input[data-player-index="6"]::before { content: ""; }
+    .mobile-layout .player-input[data-player-index="7"]::before { content: ""; }
+    .mobile-layout .player-input[data-player-index="8"]::before { content: ""; }
+    .mobile-layout .player-input[data-player-index="9"]::before { content: ""; }
+    
+    /* Adjust card inputs position */
+    .mobile-layout .card-inputs {
+        margin-left: 0px;
+        display: flex;
+    }
+    
+    /* Player stats on the right - ensure vertical layout between rows but inline within rows */
+    .mobile-layout .player-stats {
+        position: relative !important;
+        opacity: 1 !important;
+        margin: 0 0 0 10px !important;
+        width: 90px !important;
+        padding: 3px !important;
+        font-size: 11px !important;
+        display: block !important;
+    }
+    
+    /* Make stat rows stack vertically */
+    .mobile-layout .player-stats .stat-row {
+        width: 100% !important;
+        margin-bottom: 5px !important;
+        display: flex !important;
+        flex-direction: row !important;
+        align-items: center !important;
+        justify-content: space-between !important;
+        line-height: 1.2 !important;
+    }
+    
+    /* Label and value should be inline on the same line */
+    .mobile-layout .player-stats .label {
+        display: inline-block !important;
+        width: auto !important;
+        text-align: left !important;
+        vertical-align: middle !important;
+    }
+    
+    .mobile-layout .player-stats .value {
+        display: inline-block !important;
+        width: auto !important;
+        text-align: right !important;
+        vertical-align: middle !important;
+        font-weight: bold !important;
+    }
+    
+    /* Player control buttons in mobile */
+    .mobile-layout .player-shuffle-button,
+    .mobile-layout .player-fold-button {
+        position: absolute;
+        margin-left: 5px;
+        margin-top: -12px;
+        transform: none;
+    }
+    
+    /* Card drop zone spacing */
+    .mobile-layout .card-drop-zone {
+        margin: 0 2px;
+    }
+    
+    /* Action buttons stack vertically */
+    .actions {
+        flex-direction: column;
+        gap: 8px;
+    }
+    
+    .actions button {
+        width: 100%;
+        margin: 0 !important;
+    }
+
+    /* Position buttons properly in mobile view */
+    .mobile-layout .section-container {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        width: auto;
+        margin: 0 5px;
+    }
+    
+    /* Keep community labels above cards */
+    .mobile-layout .community-label {
+        margin-bottom: 5px;
+        font-size: 10px;
+        text-align: center;
+    }
+    
+    /* Adjust river container specifically */
+    .mobile-layout .community-cards-row .section-container > div {
+        display: flex;
+        flex-direction: row;
+        align-items: center;
+    }
+    
+    /* Make board shuffle button appear on the right of river card */
+    .mobile-layout .board-shuffle {
+        position: static;
+        margin-left: 8px;
+        transform: none;
+        top: auto;
+        right: auto;
+    }
+    
+    /* Player card container in mobile view */
+    .mobile-layout .player-input > div {
+        display: flex;
+        flex-direction: row;
+        align-items: center;
+    }
+    
+    /* Group cards together */
+    .mobile-layout .card-inputs {
+        margin-right: 8px;
+    }
+    
+    /* Adjust river section for board shuffle button */
+    .mobile-layout .section-container:has(.board-shuffle) {
+        flex-direction: column;
+    }
+    
+    /* Make sure flop container maintains its layout */
+    .mobile-layout .flop-container {
+        display: flex;
+        flex-direction: row;
+        gap: 6px;
+    }
+    
+    /* Fix the river section layout specifically */
+    .mobile-layout .community-cards-row .section-container {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+    }
+    
+    /* Make sure all community labels stay above their cards */
+    .mobile-layout .community-label {
+        margin-bottom: 5px;
+        font-size: 10px;
+        display: block;
+        width: 100%;
+        text-align: center;
+    }
+    
+    /* Container for the card and button in river section */
+    .mobile-layout .section-container > div {
+        display: flex;
+        flex-direction: row;
+        align-items: center;
+        justify-content: center;
+        margin-top: 2px;
+    }
+    
+    /* Make board shuffle button appear on the right of river card */
+    .mobile-layout .board-shuffle {
+        position: static;
+        margin-left: 8px;
+        transform: none;
+        top: auto;
+        right: auto;
+    }
+    
+    /* Remove any overriding flex direction that might be causing issues */
+    .mobile-layout .section-container:has(.board-shuffle) {
+        flex-direction: column;
+    }
+    
+    /* Make the community cards row display horizontally in mobile */
+    .mobile-layout .community-cards-row {
+        display: flex;
+        flex-wrap: wrap;
+        justify-content: center;
+        align-items: flex-end;
+    }
+    
+    /* Keep the shuffle button container as a simple flex container */
+    .mobile-layout .shuffle-button-container {
+        margin: 15px 5px;
+    }
+
+    /* Parannukset select-elementtiin mobiililaitteilla */
+    select {
+        height: 44px;
+        padding: 8px 12px;
+        font-size: 16px;
+        margin-bottom: 15px;
+        -webkit-appearance: none;
+        appearance: none;
+        background-image: var(--select-arrow);
+        background-repeat: no-repeat;
+        background-position: right 8px center;
+        background-size: 20px;
+        border: 1px solid var(--border-strong);
+        border-radius: 4px;
+    }
+    
+    /* Simulaatiomäärän syöttökentän tyylit mobiililaitteilla */
+    input[type="number"] {
+        height: 44px;
+        padding: 8px 12px;
+        font-size: 16px;
+        margin-bottom: 15px;
+        -webkit-appearance: none;
+        appearance: none;
+        border: 1px solid var(--border-strong);
+        border-radius: 4px;
+        min-width: 80px;
+        box-sizing: border-box;
+    }
+    
+    /* Kohdistetaan tyyli nimenomaan simulaatiomäärän kenttään */
+    #simulationCount {
+        width: 100%;
+    }
+    
+    /* Pelaajamäärän valitsimen tyyli */
+    #playerCount {
+        min-width: 80px;
+    }
+}
+/* ===== Rankingsivu (rankingit.html) ===== */
+
+/* ===== Header-navigaatio =====
+   Keskitetty ryhmä: sisältölinkit vasemmalla, ohut erotin, sitten
+   kielivalitsin ja teemanappi. Kaikki samassa rivissä, jotta navi pysyy
+   otsikon alla eikä hajoa sivun reunoihin. */
+
+.page-nav {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-wrap: wrap;
+    gap: 4px;
+    margin-top: 14px;
+    font-size: 15px;
+}
+
+.nav-group {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 4px;
+}
+
+.nav-divider {
+    width: 1px;
+    height: 22px;
+    background: var(--border);
+    margin: 0 10px;
+}
+
+.nav-link {
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    padding: 7px 15px;
+    border-radius: 999px;
+    color: var(--link);
+    text-decoration: none;
+    font-weight: 600;
+    line-height: 1.25;
+    white-space: nowrap;
+    transition: background-color 0.18s ease, color 0.18s ease, transform 0.18s ease;
+}
+
+.nav-link:hover {
+    background: var(--accent-soft);
+    transform: translateY(-1px);
+}
+
+.nav-link:active {
+    transform: none;
+}
+
+/* Ensisijainen linkki (rankingit / paluu simulaattoriin) erottuu hennolla
+   täytöllä, jotta navissa on hierarkia ilman toista väriä */
+.nav-link-primary {
+    background: var(--accent-soft);
+}
+
+.nav-link-primary:hover {
+    background: var(--accent-soft-strong);
+}
+
+/* Nuoli liikkuu osoittamaansa suuntaan hoverissa */
+.nav-arrow {
+    transition: transform 0.18s ease;
+}
+
+.nav-link:hover .nav-arrow {
+    transform: translateX(3px);
+}
+
+.nav-link:hover .nav-arrow-back {
+    transform: translateX(-3px);
+}
+
+/* Kielivalitsin: segmentoitu pari, jossa nykyinen kieli on nostettu
+   pinnaksi ja toinen on linkki */
+.lang-switch {
+    display: inline-flex;
+    align-items: center;
+    background: var(--track-bg);
+    border-radius: 999px;
+    padding: 3px;
+    font-size: 13px;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+}
+
+.lang-current,
+.lang-other {
+    padding: 4px 11px;
+    border-radius: 999px;
+    line-height: 1.3;
+    text-decoration: none;
+}
+
+.lang-current {
+    background: var(--surface);
+    color: var(--text);
+    box-shadow: var(--shadow-sm);
+}
+
+.lang-other {
+    color: var(--text-muted);
+    transition: color 0.18s ease, background-color 0.18s ease;
+}
+
+.lang-other:hover {
+    color: var(--link);
+    background: var(--accent-soft);
+}
+
+/* Teemanappi. Kumoaa yleisen button-tyylin, joten tämän on oltava
+   button-sääntöjen jälkeen tiedostossa. */
+.theme-toggle {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 36px;
+    height: 36px;
+    padding: 0;
+    margin-left: 6px;
+    border: 1px solid var(--border);
+    border-radius: 50%;
+    background: transparent;
+    color: var(--text-subtle);
+    transition: background-color 0.18s ease, color 0.18s ease, border-color 0.18s ease;
+}
+
+.theme-toggle:hover {
+    background: var(--accent-soft);
+    color: var(--link);
+    border-color: var(--accent);
+}
+
+.theme-toggle svg {
+    width: 18px;
+    height: 18px;
+    fill: none;
+    stroke: currentColor;
+    stroke-width: 2;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+}
+
+/* Näytetään se ikoni, johon klikkaus vie: vaaleassa kuu, tummassa aurinko */
+.theme-toggle .icon-sun {
+    display: none;
+}
+
+:root[data-theme="dark"] .theme-toggle .icon-sun {
+    display: block;
+}
+
+:root[data-theme="dark"] .theme-toggle .icon-moon {
+    display: none;
+}
+
+@media (max-width: 767px) {
+    /* Erotin katoaa kun ryhmät menevät omille riveilleen */
+    .nav-divider {
+        display: none;
+    }
+
+    .page-nav {
+        gap: 8px;
+    }
+
+    .nav-link {
+        font-size: 14px;
+        padding: 6px 12px;
+    }
+}
+
+.search-row {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 12px;
+    flex-wrap: wrap;
+}
+
+.search-row input[type="text"] {
+    flex: 1;
+    min-width: 240px;
+    padding: 10px 12px;
+    border: 1px solid var(--border-strong);
+    border-radius: 4px;
+    font-size: 16px;
+    font-family: Consolas, Menlo, monospace;
+}
+
+.search-row input[type="text"]:focus-visible {
+    outline: 2px solid var(--focus);
+    outline-offset: 1px;
+}
+
+.query-help {
+    font-size: 13px;
+    color: var(--text-muted);
+    background: var(--note-bg);
+    border: 1px solid var(--note-border);
+    border-radius: 4px;
+    padding: 10px 12px;
+    margin-bottom: 16px;
+}
+
+.query-help code {
+    background: var(--code-bg);
+    padding: 1px 4px;
+    border-radius: 3px;
+    font-size: 12px;
+}
+
+.query-examples {
+    margin-top: 6px;
+}
+
+button.example-chip {
+    background: var(--chip-bg);
+    color: var(--green-text);
+    border: 1px solid var(--chip-border);
+    padding: 2px 10px;
+    font-size: 13px;
+    border-radius: 12px;
+    margin: 2px 2px 0 0;
+}
+
+button.example-chip:hover {
+    background: var(--chip-hover);
+}
+
+.table-meta {
+    font-size: 14px;
+    color: var(--text-soft);
+    min-height: 20px;
+    margin-bottom: 4px;
+}
+
+.rankings-error {
+    color: var(--danger-text);
+    font-size: 14px;
+    min-height: 18px;
+    margin-bottom: 4px;
+}
+
+.table-wrap {
+    overflow-x: auto;
+    border: 1px solid var(--border-soft);
+    border-radius: 6px;
+}
+
+.rankings-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 14px;
+}
+
+.rankings-table th,
+.rankings-table td {
+    padding: 6px 12px;
+    text-align: left;
+    white-space: nowrap;
+}
+
+.rankings-table thead th {
+    background: var(--green);
+    color: var(--on-green);
+    position: sticky;
+    top: 0;
+    font-weight: normal;
+}
+
+.rankings-table tbody tr:nth-child(even) {
+    background: var(--row-zebra);
+}
+
+.rankings-table tbody tr:hover {
+    background: var(--row-hover);
+}
+
+.rankings-table .col-num {
+    text-align: right;
+    font-variant-numeric: tabular-nums;
+}
+
+/* Vasemmalle: sija on ensimmäinen sarake ja lukusuunnan ankkuri, joten
+   sen kuuluu olla kiinni vasemmassa reunassa - oikealle tasattuna numero
+   kelluisi keskellä leveää saraketta */
+.rankings-table .col-rank {
+    text-align: left;
+    font-variant-numeric: tabular-nums;
+}
+
+/* Vain solut vaimennetaan: sama sääntö otsakkeessa jättäisi "Sija"-tekstin
+   harmaaksi vihreää otsakepalkkia vasten, jolloin se ei erotu */
+.rankings-table td.col-rank {
+    color: var(--text-muted);
+}
+
+/* Vain solut: sama sääntö otsakkeessa vaihtaisi "Käsi"-tekstin fontin */
+.rankings-table td.col-hand {
+    font-family: Consolas, Menlo, monospace;
+}
+
+/* ===== Sarakeleveydet =====
+   table-layout: fixed: Sija saa kiinteän leveyden pelimuodon pahimman
+   sisällön mukaan (sisältää vaihteluvälin, esim. Omaha5
+   "100 139 (100 015–100 278)" = 215 px), ja kaikki muut sarakkeet jakavat
+   lopun tilan tasan. Selain ei mitoita mitään sisällöstä, joten leveydet
+   eivät elä sivutettaessa, haettaessa tai pelimuotoa vaihtaessa.
+   min-width pitää tasaosuudet sisältöä leveämpinä; kapeammalla näytöllä
+   .table-wrap rullaa vaakaan kuten ennenkin. */
+.rankings-table {
+    table-layout: fixed;
+    min-width: 850px;
+}
+.rankings-table th.col-rank { width: 130px; }
+.rankings-table[data-game="omaha"] th.col-rank { width: 195px; }
+.rankings-table[data-game="omaha5"] th.col-rank { width: 218px; }
+
+/* Kapealla näytöllä kiinteä tasajako tuhlaa tilan: "AA"-solu saisi yhtä
+   leveän sarakkeen kuin Keskivirhe, ja Equity jäisi ruudun ulkopuolelle.
+   Sarakkeet mitoitetaan sisällöstä; leveydet voivat silloin elää
+   sivutettaessa, mutta mobiilissa se on pienempi paha kuin vaakarullaus.
+   Sija-alue saa rivittyä, muuten sarakkeen minimileveys olisi koko
+   vaihteluvälin mitta (tuhaterottimet ovat NBSP:itä eivätkä katkea). */
+@media (max-width: 767px) {
+    .rankings-table {
+        table-layout: auto;
+        min-width: 0;
+        font-size: 13px;
+    }
+    .rankings-table th.col-rank,
+    .rankings-table[data-game="omaha"] th.col-rank,
+    .rankings-table[data-game="omaha5"] th.col-rank {
+        width: auto;
+    }
+    .rankings-table th,
+    .rankings-table td {
+        padding: 6px 5px;
+    }
+    .rankings-table .col-rank {
+        white-space: normal;
+    }
+    /* Nimi ei yksilöi luokkaa (hand-sarake on yksikäsitteinen), joten
+       kapealla näytöllä se on ensimmäinen mikä väistyy Equityn tieltä */
+    .rankings-table .col-label {
+        display: none;
+    }
+}
+
+.rankings-table.no-label-col .col-label {
+    display: none;
+}
+
+.rankings-table .no-results {
+    text-align: center;
+    color: var(--text-faint);
+    padding: 20px;
+}
+
+.pager {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin: 14px 0 6px;
+    flex-wrap: wrap;
+}
+
+.pager #pageInfo {
+    font-variant-numeric: tabular-nums;
+    color: var(--text-soft);
+    min-width: 130px;
+    text-align: center;
+}
+
+.csv-link {
+    margin-left: auto;
+    color: var(--link);
+    font-size: 14px;
+}
+
+.data-license-note {
+    font-size: 12px;
+    color: var(--text-faint);
+    margin-top: 14px;
+    line-height: 1.5;
+}
+
+@media (max-width: 767px) {
+    .csv-link {
+        margin-left: 0;
+    }
+}
+
+/* Rivin laajennus: pelaajamäärävertailu */
+
+.rankings-table tbody tr.hand-row {
+    cursor: pointer;
+}
+
+.rankings-table tbody tr.hand-row:focus-visible {
+    outline: 2px solid var(--focus);
+    outline-offset: -2px;
+}
+
+.rankings-table tbody tr.hand-row.open {
+    background: var(--row-active);
+}
+
+.rankings-table tbody tr.detail-row,
+.rankings-table tbody tr.detail-row:hover {
+    background: var(--row-zebra);
+}
+
+.rankings-table .detail-row > td {
+    padding: 10px 16px 14px;
+    white-space: normal;
+}
+
+.hand-detail-caption {
+    font-size: 13px;
+    color: var(--text-soft);
+    margin-bottom: 6px;
+}
+
+.hand-detail-table {
+    border-collapse: collapse;
+    font-size: 13px;
+}
+
+.hand-detail-table th,
+.hand-detail-table td {
+    padding: 3px 14px 3px 0;
+    text-align: left;
+    white-space: nowrap;
+}
+
+.hand-detail-table th {
+    color: var(--text-subtle);
+    font-weight: normal;
+    border-bottom: 1px solid var(--border);
+}
+
+.hand-detail-table .col-num {
+    text-align: right;
+    font-variant-numeric: tabular-nums;
+}
+
+.hand-detail-table tr.current-players td {
+    font-weight: bold;
+}
+
+/* ===== Preflop-chart: top-X %:n alue (rankingit.html) ===== */
+
+/* !important, jotta piilotus voittaa myös display: flex/grid -säännöt
+   (esim. .chart-legend) selektorin järjestyksestä riippumatta */
+.hidden {
+    display: none !important;
+}
+
+.range-chart-section {
+    margin-top: 30px;
+}
+
+.range-chart-section h2 {
+    color: var(--heading);
+    font-size: 20px;
+    margin-bottom: 8px;
+}
+
+.range-chart-intro {
+    font-size: 14px;
+    color: var(--text-muted);
+    max-width: 820px;
+    margin-bottom: 14px;
+}
+
+.range-controls {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    flex-wrap: wrap;
+    margin-bottom: 4px;
+}
+
+.range-controls label {
+    margin-bottom: 0;
+    white-space: nowrap;
+}
+
+.range-value {
+    color: var(--green-text);
+    font-variant-numeric: tabular-nums;
+}
+
+.range-controls input[type="range"] {
+    flex: 1;
+    min-width: 200px;
+    max-width: 420px;
+    width: auto;
+    padding: 0;
+    border: none;
+    accent-color: var(--green-text);
+}
+
+.range-summary {
+    font-size: 14px;
+    color: var(--text-soft);
+    font-variant-numeric: tabular-nums;
+    min-height: 20px;
+    margin-bottom: 12px;
+}
+
+.preflop-chart-wrap {
+    overflow-x: auto;
+}
+
+.preflop-chart {
+    display: grid;
+    grid-template-columns: repeat(13, minmax(36px, 1fr));
+    /* 2 px:n rako toimii erottimena, jottei viereisiä täyttöjä lueta
+       yhtenäisenä alueena */
+    gap: 2px;
+    max-width: 640px;
+    min-width: 500px;
+}
+
+/* Solut ovat nappeja (näppäimistöfokus + tooltip), joten yleinen
+   button-tyyli pitää kumota kauttaaltaan */
+button.pc-cell {
+    background-color: var(--cell-bg);
+    color: var(--text-subtle);
+    border: 1px solid var(--cell-border);
+    border-radius: 3px;
+    padding: 7px 0;
+    font-family: Consolas, Menlo, monospace;
+    font-size: 11px;
+    line-height: 1;
+    text-align: center;
+    transition: none;
+}
+
+/* Lävistäjä (parit) hennosti tummempana, jotta ruudukossa pysyy
+   suunnistamaan myös ilman värivalintaa */
+button.pc-cell.pc-pair {
+    background-color: var(--cell-bg-pair);
+}
+
+button.pc-cell:hover {
+    background-color: var(--chip-hover);
+    color: var(--text);
+}
+
+/* Alueeseen kuuluva käsi: tumma tausta + lihavointi, jolloin ero säilyy
+   myös värinäön puutteissa ja mustavalkotulosteessa */
+button.pc-cell.in-range {
+    background-color: var(--green);
+    border-color: var(--green);
+    color: var(--on-green);
+    font-weight: bold;
+}
+
+button.pc-cell.in-range:hover {
+    background-color: var(--green-hover);
+}
+
+.chart-legend {
+    display: flex;
+    gap: 16px;
+    flex-wrap: wrap;
+    font-size: 13px;
+    color: var(--text-muted);
+    margin-top: 10px;
+}
+
+.legend-swatch {
+    display: inline-block;
+    width: 13px;
+    height: 13px;
+    border-radius: 3px;
+    margin-right: 5px;
+    vertical-align: -2px;
+}
+
+.legend-swatch.legend-in {
+    background-color: var(--green);
+}
+
+.legend-swatch.legend-out {
+    background-color: var(--cell-bg);
+    border: 1px solid var(--border-strong);
+}
+
+.range-info-panel {
+    background: var(--note-bg);
+    border: 1px solid var(--note-border);
+    border-radius: 6px;
+    padding: 12px 16px;
+    font-size: 14px;
+    max-width: 640px;
+}
+
+.range-info-headline {
+    font-weight: bold;
+    margin-bottom: 6px;
+}
+
+.range-info-panel ul {
+    margin: 0 0 10px 20px;
+}
+
+.range-info-panel li {
+    margin-bottom: 4px;
+}
+
+button.range-jump-button {
+    font-size: 14px;
+    padding: 6px 14px;
+    margin-right: 0;
+}
+
+.range-chart-note {
+    font-size: 12px;
+    color: var(--text-faint);
+    margin-top: 12px;
+    max-width: 820px;
+    line-height: 1.5;
+}
+
+@media (max-width: 767px) {
+    .preflop-chart {
+        min-width: 420px;
+    }
+
+    button.pc-cell {
+        font-size: 9px;
+        padding: 6px 0;
+    }
+}
+
+/* Menetelmäsivu (prose-tyyli). Ei omaa max-widthiä: sivun kortti on
+   saman levyinen kuin muillakin sivuilla (.container, 1200 px) */
+
+.prose h2 {
+    color: var(--heading);
+    font-size: 20px;
+    margin: 24px 0 8px;
+}
+
+.prose p {
+    margin-bottom: 12px;
+}
+
+.prose ul {
+    margin: 0 0 12px 22px;
+}
+
+.prose li {
+    margin-bottom: 6px;
+}
+
+.prose table {
+    border-collapse: collapse;
+    font-size: 14px;
+    margin: 12px 0 16px;
+    width: 100%;
+}
+
+.prose th,
+.prose td {
+    border: 1px solid var(--border);
+    padding: 5px 10px;
+    text-align: left;
+}
+
+.prose thead th {
+    background: var(--green);
+    color: var(--on-green);
+    font-weight: normal;
+}
+
+.prose tbody tr:nth-child(even) {
+    background: var(--row-zebra);
+}
+
+.prose a {
+    color: var(--link);
+}
+
+/* ===== Saavutettavuus ===== */
+
+/* Näkyvä fokus näppäimistökäyttäjälle - ilman tätä sivulla ei näe missä on */
+a:focus-visible,
+button:focus-visible,
+select:focus-visible,
+input:focus-visible,
+[tabindex]:focus-visible {
+    outline: 2px solid var(--focus);
+    outline-offset: 2px;
+}
+
+/* Piilotettujen radionappien fokus näytetään tekstillä */
+.radio-label input[type="radio"]:focus-visible + span {
+    outline: 2px solid var(--focus);
+    outline-offset: 2px;
+    border-radius: 3px;
+}
+
+.deck-card:focus-visible {
+    outline: 2px solid var(--focus);
+    outline-offset: 1px;
+}
+
+/* Liikeherkille: siirtymät ja animaatiot pois */
+@media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+        transition-duration: 0.01ms !important;
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+    }
+}

@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html lang="fi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Monte Carlo Pokeri Simulaattori | Korttimestari</title>
+    <meta name="description" content="Ilmainen pokerin todennäköisyyslaskin: Texas Hold'em, Omaha ja Omaha5, 2–10 pelaajaa. Monte Carlo -simulaatio selaimessa, tarkat esilasketut preflop-equityt ja käsijakaumat.">
+    <meta property="og:title" content="Korttimestari — pokerin todennäköisyyslaskin">
+    <meta property="og:description" content="Simuloi Hold'em-, Omaha- ja Omaha5-käsien voittotodennäköisyydet ja katso eksaktit preflop-rankingit.">
+    <meta property="og:type" content="website">
+    <meta property="og:image" content="/images/korttimestari.png">
+    <meta property="og:locale" content="fi_FI">
+    <meta property="og:locale:alternate" content="en_GB">
+    <link rel="stylesheet" href="/css/style.css">
+    <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png">
+    <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png">
+    <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png">
+    <link rel="manifest" href="/site.webmanifest">
+    <meta name="theme-color" content="#f4f4f4" media="(prefers-color-scheme: light)">
+    <meta name="theme-color" content="#12161c" media="(prefers-color-scheme: dark)">
+    <!-- Ennen bodyä, jottei tallennettu tumma tila välähdä valkoisena -->
+    <script src="/js/theme.js"></script>
+</head>
+<body>
+    <div class="main-logo-container">
+        <a class="main-logo-link" href="/" title="Etusivulle">
+            <img src="/images/korttimestari_kasvot2.png" alt="Korttimestari logo" class="main-logo">
+        </a>
+    </div>
+    <div class="container">
+        <header class="site-header">
+            <h1>Monte Carlo Pokeri Simulaattori</h1>
+            <nav class="page-nav" aria-label="Sivun navigaatio">
+                <span class="nav-group">
+                    <a class="nav-link nav-link-primary" href="/rankingit">Preflop-käsirankingit<span class="nav-arrow" aria-hidden="true">→</span></a>
+                    <a class="nav-link" href="/menetelmat">Menetelmät</a>
+                </span>
+                <span class="nav-divider" aria-hidden="true"></span>
+                <span class="nav-group">
+                    <span class="lang-switch" role="group" aria-label="Kieli">
+                        <span class="lang-current" aria-current="true">FI</span>
+                        <a class="lang-other" href="/en/" lang="en" hreflang="en" title="In English">EN</a>
+                    </span>
+                    <button type="button" id="themeToggle" class="theme-toggle" aria-pressed="false" aria-label="Vaihda vaalean ja tumman tilan välillä" title="Vaalea / tumma tila">
+                        <svg class="icon-moon" viewBox="0 0 24 24" aria-hidden="true"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
+                        <svg class="icon-sun" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></svg>
+                    </button>
+                </span>
+            </nav>
+        </header>
+        
+        <div class="settings">
+            <div class="setting-group">
+                <label for="playerCount">Pelaajien määrä:</label>
+                <select id="playerCount">
+                    <option value="2">2</option>
+                    <option value="3">3</option>
+                    <option value="4">4</option>
+                    <option value="5">5</option>
+                    <option value="6">6</option>
+                    <option value="7">7</option>
+                    <option value="8">8</option>
+                    <option value="9">9</option>
+                    <option value="10">10</option>
+                </select>
+            </div>
+            
+            <div class="setting-group">
+                <label for="simulationCount">Simulaatioiden määrä:</label>
+                <input type="number" id="simulationCount" min="100" max="1000000" value="10000">
+            </div>
+            
+            <div class="setting-group game-selection">
+                <label>Pelimuoto:</label>
+                <div class="radio-group game-type-group">
+                    <div class="background-highlight"></div>
+                    <label class="radio-label">
+                        <input type="radio" name="gameType" value="holdem" checked>
+                        <span>Texas</span>
+                    </label>
+                    <label class="radio-label">
+                        <input type="radio" name="gameType" value="omaha">
+                        <span>Omaha</span>
+                    </label>
+                    <label class="radio-label">
+                        <input type="radio" name="gameType" value="omaha5">
+                        <span>Omaha5</span>
+                    </label>
+                </div>
+            </div>
+
+            <div class="setting-group">
+                <label>Vastustajat:</label>
+                <div class="radio-group">
+                    <div class="background-highlight"></div>
+                    <label class="radio-label">
+                        <input type="radio" name="opponentMode" value="fixed" checked>
+                        <span>Valitut</span>
+                    </label>
+                    <label class="radio-label">
+                        <input type="radio" name="opponentMode" value="random">
+                        <span>Tuntemat.</span>
+                    </label>
+                </div>
+            </div>
+        </div>
+
+        <!-- New card deck section -->
+        <div class="card-deck-container">
+            <div class="deck-header">
+                <div class="deck-heading">
+                    <h3>Korttipakka</h3>
+                    <p class="deck-instructions">Tuplaklikkaa, raahaa tai valitse näppäimistöllä (sarkain + Enter) kortteja pelaajien käsiin</p>
+                </div>
+                <div class="setting-group deck-color-selection">
+                    <label>Pakan värit:</label>
+                    <div class="radio-group">
+                        <div class="background-highlight"></div>
+                        <label class="radio-label">
+                            <input type="radio" name="deckColor" value="standard" checked>
+                            <span>2-väri</span>
+                        </label>
+                        <label class="radio-label">
+                            <input type="radio" name="deckColor" value="fourcolor">
+                            <span>4-väri</span>
+                        </label>
+                    </div>
+                </div>
+            </div>
+            <div id="cardDeck" class="card-deck"></div>
+        </div>
+        
+        <div id="playersContainer" class="players-container">
+            <!-- Player cards inputs will be dynamically added here -->
+        </div>
+        
+        <div class="actions">
+            <button id="randomizeCards" class="secondary-button">Arvo pelaajien kortit</button>
+            <button id="runSimulation">Suorita simulaatio</button>  
+        </div>
+        <div class="actions">
+            <div id="loadingIndicator" class="loading invisible">
+                <span class="loading-text">Simuloidaan...</span>
+                <span class="loading-progress"></span>
+            </div>
+            <button id="cancelSimulation" class="secondary-button invisible">Peruuta</button>
+        </div>
+        <div id="simulationNotice" class="simulation-notice"></div>
+    </div>
+    
+    <script src="/js/i18n.js"></script>
+    <script src="/js/script.js"></script>
+</body>
+</html>

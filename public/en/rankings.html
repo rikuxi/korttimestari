@@ -1,0 +1,186 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Preflop Hand Rankings — Hold'em, Omaha and Omaha5 | Korttimestari</title>
+    <meta name="description" content="Browse and search poker starting hand rankings: preflop equities computed exactly or with a hybrid method for every hand class (Hold'em 169, Omaha 16,432, Omaha5 134,459) with 2–10 players.">
+    <meta property="og:title" content="Preflop Hand Rankings — Hold'em, Omaha and Omaha5">
+    <meta property="og:description" content="Search by hand or partial hand and see rank, equity and error bounds for every player count. Full data downloadable as CSV (CC BY 4.0).">
+    <meta property="og:type" content="website">
+    <meta property="og:image" content="/images/korttimestari.png">
+    <meta property="og:locale" content="en_GB">
+    <meta property="og:locale:alternate" content="fi_FI">
+    <link rel="stylesheet" href="/css/style.css">
+    <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png">
+    <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png">
+    <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png">
+    <link rel="manifest" href="/site.webmanifest">
+    <meta name="theme-color" content="#f4f4f4" media="(prefers-color-scheme: light)">
+    <meta name="theme-color" content="#12161c" media="(prefers-color-scheme: dark)">
+    <!-- Before body so a stored dark theme does not flash white -->
+    <script src="/js/theme.js"></script>
+</head>
+<body>
+    <div class="main-logo-container">
+        <a class="main-logo-link" href="/en/" title="Home">
+            <img src="/images/korttimestari_kasvot2.png" alt="Korttimestari logo" class="main-logo">
+        </a>
+    </div>
+    <div class="container">
+        <header class="site-header">
+            <h1>Preflop Hand Rankings</h1>
+            <nav class="page-nav" aria-label="Page navigation">
+                <span class="nav-group">
+                    <a class="nav-link nav-link-primary" href="/en/"><span class="nav-arrow nav-arrow-back" aria-hidden="true">←</span>Simulator</a>
+                    <a class="nav-link" href="/en/methods">How were these numbers computed?</a>
+                </span>
+                <span class="nav-divider" aria-hidden="true"></span>
+                <span class="nav-group">
+                    <span class="lang-switch" role="group" aria-label="Language">
+                        <a class="lang-other" href="/rankingit" lang="fi" hreflang="fi" title="Suomeksi">FI</a>
+                        <span class="lang-current" aria-current="true">EN</span>
+                    </span>
+                    <button type="button" id="themeToggle" class="theme-toggle" aria-pressed="false" aria-label="Toggle light and dark theme" title="Light / dark theme">
+                        <svg class="icon-moon" viewBox="0 0 24 24" aria-hidden="true"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
+                        <svg class="icon-sun" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></svg>
+                    </button>
+                </span>
+            </nav>
+        </header>
+
+        <div class="settings">
+            <div class="setting-group game-selection">
+                <label>Game type:</label>
+                <div class="radio-group game-type-group">
+                    <div class="background-highlight"></div>
+                    <label class="radio-label">
+                        <input type="radio" name="gameType" value="holdem" checked>
+                        <span>Texas</span>
+                    </label>
+                    <label class="radio-label">
+                        <input type="radio" name="gameType" value="omaha">
+                        <span>Omaha</span>
+                    </label>
+                    <label class="radio-label">
+                        <input type="radio" name="gameType" value="omaha5">
+                        <span>Omaha5</span>
+                    </label>
+                </div>
+            </div>
+
+            <div class="setting-group">
+                <label for="playersSelect">Number of players:</label>
+                <select id="playersSelect"></select>
+            </div>
+        </div>
+
+        <form id="searchForm" class="search-row">
+            <input type="text" id="handQuery" autocomplete="off" spellcheck="false"
+                   placeholder="Search by hand or part of one, e.g. AA, AKs, AAJT or (AJ)(AJ)T">
+            <button type="submit">Search</button>
+            <button type="button" id="clearQuery" class="secondary-button">Clear</button>
+        </form>
+
+        <div class="query-help">
+            <p>
+                Plain ranks (<code>AAJ</code>) do not constrain suits. Cards
+                inside parentheses share a suit: <code>(AK)</code> = AK
+                suited, <code>(AK)(AK)</code> = two suited pairs. Concrete
+                cards also work (<code>AsKsQh</code> — same letter = same
+                suit). A lone rank may be of any suit; <code>(T)</code>
+                forces its own suit. Hold'em: <code>AKs</code> / <code>AKo</code>.
+            </p>
+            <p class="query-examples">
+                Try:
+                <button type="button" class="example-chip" data-game="holdem" data-q="AKs">AKs</button>
+                <button type="button" class="example-chip" data-game="omaha" data-q="AAKK">AAKK</button>
+                <button type="button" class="example-chip" data-game="omaha" data-q="(AK)(AK)">(AK)(AK)</button>
+                <button type="button" class="example-chip" data-game="omaha5" data-q="(AJ)(AJ)(T)">(AJ)(AJ)(T)</button>
+                <button type="button" class="example-chip" data-game="omaha5" data-q="AAAA">AAAA</button>
+            </p>
+        </div>
+
+        <div id="rankingsMeta" class="table-meta"></div>
+        <div id="rankingsError" class="rankings-error"></div>
+
+        <div class="table-wrap">
+            <table class="rankings-table" data-game="holdem">
+                <thead>
+                    <tr>
+                        <th class="col-rank">Rank</th>
+                        <th class="col-hand">Hand</th>
+                        <th class="col-label">Name</th>
+                        <th class="col-num col-equity">Equity %</th>
+                        <th class="col-num col-toppct" title="Share of all combos at least as good, this hand included">Top %</th>
+                        <th class="col-num col-se">Std. error</th>
+                        <th class="col-num col-combos">Combos</th>
+                    </tr>
+                </thead>
+                <tbody id="rankingsBody"></tbody>
+            </table>
+        </div>
+
+        <div class="pager">
+            <button id="prevPage" class="secondary-button">‹ Previous</button>
+            <span id="pageInfo"></span>
+            <button id="nextPage" class="secondary-button">Next ›</button>
+            <a id="csvLink" class="csv-link" href="#">Download the full table (CSV)</a>
+        </div>
+
+        <section class="range-chart-section" aria-labelledby="rangeChartTitle">
+            <h2 id="rangeChartTitle">Preflop chart: the top-X % range</h2>
+            <p class="range-chart-intro">
+                Use the slider to choose how large a share of the best hands
+                (weighted by combos) belongs to the range. For Hold'em the
+                range is shown on the familiar 13&times;13 grid: pairs on the
+                diagonal, suited hands above it and offsuit hands below. In
+                Omaha and Omaha5 there are thousands of hand classes and no
+                equivalent grid, so the range is described with summary
+                statistics.
+            </p>
+
+            <div class="range-controls">
+                <label for="rangeSlider">Range size:
+                    <span id="rangeValue" class="range-value">top 25 %</span>
+                </label>
+                <input type="range" id="rangeSlider" min="1" max="100" step="1" value="25"
+                       aria-describedby="rangeSummary">
+            </div>
+            <div id="rangeSummary" class="range-summary" aria-live="polite"></div>
+
+            <div class="preflop-chart-wrap">
+                <div id="preflopChart" class="preflop-chart"
+                     aria-label="Hold'em hand grid 13x13"></div>
+            </div>
+            <div id="rangeInfoPanel" class="range-info-panel hidden"></div>
+
+            <div class="chart-legend" id="chartLegend">
+                <span class="legend-item"><span class="legend-swatch legend-in"></span> inside the range</span>
+                <span class="legend-item"><span class="legend-swatch legend-out"></span> outside the range</span>
+            </div>
+
+            <p class="range-chart-note">
+                The range is based on this page's all-in equity ranking for
+                the selected player count (best hand first), not on a
+                solver's GTO strategy: a real opening range also depends on
+                position and playability. Clicking a cell searches for that
+                hand in the table.
+            </p>
+        </section>
+
+        <p class="data-license-note">
+            The heads-up tables (Hold'em, Omaha) are exact: every board and
+            every opponent hand has been enumerated. The rest were computed
+            with a hybrid method (exact over all boards, Monte Carlo over
+            opponent card removal) and each row shows its standard error.
+            The rank range in parentheses tells which ranks the hand could
+            occupy within the error bounds. The data is licensed under
+            CC BY 4.0 — free to use with attribution (Korttimestari).
+        </p>
+    </div>
+
+    <script src="/js/i18n.js"></script>
+    <script src="/js/rankings.js"></script>
+</body>
+</html>

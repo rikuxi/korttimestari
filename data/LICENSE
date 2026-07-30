@@ -1,0 +1,25 @@
+Data license (CC BY 4.0)
+========================
+
+The data files in this directory and its subdirectories (*.json, *.csv) —
+the precomputed preflop equity tables for Texas Hold'em, Omaha and Omaha5,
+including the exact heads-up tables and the hybrid multi-way tables — are
+licensed under the Creative Commons Attribution 4.0 International license
+(CC BY 4.0).
+
+You are free to copy, share and adapt this data for any purpose, including
+commercial use, provided you give appropriate credit.
+
+Suggested attribution:
+
+    Korttimestari preflop equity tables, (c) 2026 Riku,
+    https://github.com/rikuxi/korttimestari — licensed under CC BY 4.0.
+
+Full license text: https://creativecommons.org/licenses/by/4.0/legalcode
+
+Computation methods and error bounds are documented per table in each
+file's meta block and in data/README.md; the methodology summary is on
+the site's methods page (/menetelmat.html, in English /en/methods.html).
+
+The source code of this project is licensed separately under the MIT
+license — see ../LICENSE.

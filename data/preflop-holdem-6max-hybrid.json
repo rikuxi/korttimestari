@@ -1,0 +1,1715 @@
+{
+  "meta": {
+    "gameType": "holdem",
+    "players": 6,
+    "scenario": "all-in preflop, hero vs. 5 satunnaista kättä",
+    "method": "hybridi: eksakti kaikkien C(52,5) pöydän yli, Monte Carlo vastustajien korttien poiston yli",
+    "exact": false,
+    "boards": 2598960,
+    "configsPerBoard": 512,
+    "replicates": 16,
+    "handsScoredPerConfig": 666,
+    "totalSamples": 886224568320,
+    "rng": "xoshiro128** (jakso 2^128-1), oma virta per palanen",
+    "handClasses": 169,
+    "generatedAt": "2026-07-27T18:00:24.795Z",
+    "script": "scripts/hybridHoldem.js",
+    "rankBounds": {
+      "method": "naapuri kuuluu alueeseen jos equity-ero < 2*sqrt(se_i^2+se_j^2)",
+      "note": "eksakteissa taulukoissa alue on [rank, rank]",
+      "addedAt": "2026-07-29T00:49:18.415Z"
+    }
+  },
+  "hands": [
+    {
+      "key": "AA",
+      "rank": 1,
+      "combos": 6,
+      "equity": 49.18829,
+      "se": 0.00116,
+      "samples": 4009969486,
+      "rankLow": 1,
+      "rankHigh": 1
+    },
+    {
+      "key": "KK",
+      "rank": 2,
+      "combos": 6,
+      "equity": 42.96165,
+      "se": 0.00204,
+      "samples": 4009987854,
+      "rankLow": 2,
+      "rankHigh": 2
+    },
+    {
+      "key": "QQ",
+      "rank": 3,
+      "combos": 6,
+      "equity": 37.88603,
+      "se": 0.00162,
+      "samples": 4009998017,
+      "rankLow": 3,
+      "rankHigh": 3
+    },
+    {
+      "key": "JJ",
+      "rank": 4,
+      "combos": 6,
+      "equity": 33.56881,
+      "se": 0.00113,
+      "samples": 4010086473,
+      "rankLow": 4,
+      "rankHigh": 4
+    },
+    {
+      "key": "AKs",
+      "rank": 5,
+      "combos": 4,
+      "equity": 31.06261,
+      "se": 0.00071,
+      "samples": 2673316179,
+      "rankLow": 5,
+      "rankHigh": 5
+    },
+    {
+      "key": "TT",
+      "rank": 6,
+      "combos": 6,
+      "equity": 29.91563,
+      "se": 0.00106,
+      "samples": 4010006430,
+      "rankLow": 6,
+      "rankHigh": 6
+    },
+    {
+      "key": "AQs",
+      "rank": 7,
+      "combos": 4,
+      "equity": 29.31178,
+      "se": 0.00129,
+      "samples": 2673337598,
+      "rankLow": 7,
+      "rankHigh": 7
+    },
+    {
+      "key": "KQs",
+      "rank": 8,
+      "combos": 4,
+      "equity": 28.34071,
+      "se": 0.00106,
+      "samples": 2673321964,
+      "rankLow": 8,
+      "rankHigh": 8
+    },
+    {
+      "key": "AJs",
+      "rank": 9,
+      "combos": 4,
+      "equity": 27.87838,
+      "se": 0.00106,
+      "samples": 2673353707,
+      "rankLow": 9,
+      "rankHigh": 9
+    },
+    {
+      "key": "AKo",
+      "rank": 10,
+      "combos": 12,
+      "equity": 27.84596,
+      "se": 0.00085,
+      "samples": 8019981073,
+      "rankLow": 10,
+      "rankHigh": 10
+    },
+    {
+      "key": "KJs",
+      "rank": 11,
+      "combos": 4,
+      "equity": 26.9524,
+      "se": 0.00089,
+      "samples": 2673339008,
+      "rankLow": 11,
+      "rankHigh": 11
+    },
+    {
+      "key": "ATs",
+      "rank": 12,
+      "combos": 4,
+      "equity": 26.7029,
+      "se": 0.00084,
+      "samples": 2673339417,
+      "rankLow": 12,
+      "rankHigh": 12
+    },
+    {
+      "key": "99",
+      "rank": 13,
+      "combos": 6,
+      "equity": 26.63381,
+      "se": 0.00152,
+      "samples": 4010047014,
+      "rankLow": 13,
+      "rankHigh": 13
+    },
+    {
+      "key": "QJs",
+      "rank": 14,
+      "combos": 4,
+      "equity": 26.2316,
+      "se": 0.0012,
+      "samples": 2673366461,
+      "rankLow": 14,
+      "rankHigh": 14
+    },
+    {
+      "key": "AQo",
+      "rank": 15,
+      "combos": 12,
+      "equity": 25.91591,
+      "se": 0.0012,
+      "samples": 8019955441,
+      "rankLow": 15,
+      "rankHigh": 15
+    },
+    {
+      "key": "KTs",
+      "rank": 16,
+      "combos": 4,
+      "equity": 25.82911,
+      "se": 0.00079,
+      "samples": 2673340833,
+      "rankLow": 16,
+      "rankHigh": 16
+    },
+    {
+      "key": "QTs",
+      "rank": 17,
+      "combos": 4,
+      "equity": 25.15676,
+      "se": 0.00106,
+      "samples": 2673355228,
+      "rankLow": 17,
+      "rankHigh": 17
+    },
+    {
+      "key": "KQo",
+      "rank": 18,
+      "combos": 12,
+      "equity": 25.03336,
+      "se": 0.00114,
+      "samples": 8020000292,
+      "rankLow": 18,
+      "rankHigh": 18
+    },
+    {
+      "key": "JTs",
+      "rank": 19,
+      "combos": 4,
+      "equity": 24.86079,
+      "se": 0.00101,
+      "samples": 2673363340,
+      "rankLow": 19,
+      "rankHigh": 19
+    },
+    {
+      "key": "AJo",
+      "rank": 20,
+      "combos": 12,
+      "equity": 24.3321,
+      "se": 0.00099,
+      "samples": 8020097614,
+      "rankLow": 20,
+      "rankHigh": 20
+    },
+    {
+      "key": "A9s",
+      "rank": 21,
+      "combos": 4,
+      "equity": 24.12748,
+      "se": 0.00049,
+      "samples": 2673331359,
+      "rankLow": 21,
+      "rankHigh": 21
+    },
+    {
+      "key": "88",
+      "rank": 22,
+      "combos": 6,
+      "equity": 24.02428,
+      "se": 0.00119,
+      "samples": 4010098664,
+      "rankLow": 22,
+      "rankHigh": 22
+    },
+    {
+      "key": "KJo",
+      "rank": 23,
+      "combos": 12,
+      "equity": 23.49675,
+      "se": 0.00102,
+      "samples": 8020081131,
+      "rankLow": 23,
+      "rankHigh": 23
+    },
+    {
+      "key": "K9s",
+      "rank": 24,
+      "combos": 4,
+      "equity": 23.2482,
+      "se": 0.00058,
+      "samples": 2673339441,
+      "rankLow": 24,
+      "rankHigh": 24
+    },
+    {
+      "key": "A8s",
+      "rank": 25,
+      "combos": 4,
+      "equity": 23.22568,
+      "se": 0.00091,
+      "samples": 2673356908,
+      "rankLow": 25,
+      "rankHigh": 25
+    },
+    {
+      "key": "ATo",
+      "rank": 26,
+      "combos": 12,
+      "equity": 23.03062,
+      "se": 0.00104,
+      "samples": 8019995705,
+      "rankLow": 26,
+      "rankHigh": 26
+    },
+    {
+      "key": "QJo",
+      "rank": 27,
+      "combos": 12,
+      "equity": 22.86831,
+      "se": 0.00107,
+      "samples": 8020128108,
+      "rankLow": 27,
+      "rankHigh": 27
+    },
+    {
+      "key": "Q9s",
+      "rank": 28,
+      "combos": 4,
+      "equity": 22.60707,
+      "se": 0.00095,
+      "samples": 2673359106,
+      "rankLow": 28,
+      "rankHigh": 28
+    },
+    {
+      "key": "A7s",
+      "rank": 29,
+      "combos": 4,
+      "equity": 22.38977,
+      "se": 0.00081,
+      "samples": 2673399374,
+      "rankLow": 29,
+      "rankHigh": 29
+    },
+    {
+      "key": "T9s",
+      "rank": 30,
+      "combos": 4,
+      "equity": 22.38745,
+      "se": 0.00078,
+      "samples": 2673349145,
+      "rankLow": 30,
+      "rankHigh": 30
+    },
+    {
+      "key": "J9s",
+      "rank": 31,
+      "combos": 4,
+      "equity": 22.35281,
+      "se": 0.00117,
+      "samples": 2673375346,
+      "rankLow": 31,
+      "rankHigh": 31
+    },
+    {
+      "key": "KTo",
+      "rank": 32,
+      "combos": 12,
+      "equity": 22.25061,
+      "se": 0.00089,
+      "samples": 8019989896,
+      "rankLow": 32,
+      "rankHigh": 32
+    },
+    {
+      "key": "A5s",
+      "rank": 33,
+      "combos": 4,
+      "equity": 22.18761,
+      "se": 0.0008,
+      "samples": 2673370722,
+      "rankLow": 33,
+      "rankHigh": 33
+    },
+    {
+      "key": "77",
+      "rank": 34,
+      "combos": 6,
+      "equity": 21.85492,
+      "se": 0.00057,
+      "samples": 4010164343,
+      "rankLow": 34,
+      "rankHigh": 34
+    },
+    {
+      "key": "QTo",
+      "rank": 35,
+      "combos": 12,
+      "equity": 21.67371,
+      "se": 0.00103,
+      "samples": 8020069066,
+      "rankLow": 35,
+      "rankHigh": 36
+    },
+    {
+      "key": "A4s",
+      "rank": 36,
+      "combos": 4,
+      "equity": 21.67211,
+      "se": 0.00064,
+      "samples": 2673314425,
+      "rankLow": 35,
+      "rankHigh": 36
+    },
+    {
+      "key": "A6s",
+      "rank": 37,
+      "combos": 4,
+      "equity": 21.59788,
+      "se": 0.00105,
+      "samples": 2673374155,
+      "rankLow": 37,
+      "rankHigh": 37
+    },
+    {
+      "key": "JTo",
+      "rank": 38,
+      "combos": 12,
+      "equity": 21.47924,
+      "se": 0.00085,
+      "samples": 8020148336,
+      "rankLow": 38,
+      "rankHigh": 38
+    },
+    {
+      "key": "K8s",
+      "rank": 39,
+      "combos": 4,
+      "equity": 21.37026,
+      "se": 0.00063,
+      "samples": 2673341861,
+      "rankLow": 39,
+      "rankHigh": 39
+    },
+    {
+      "key": "A3s",
+      "rank": 40,
+      "combos": 4,
+      "equity": 21.1808,
+      "se": 0.00079,
+      "samples": 2673358154,
+      "rankLow": 40,
+      "rankHigh": 40
+    },
+    {
+      "key": "Q8s",
+      "rank": 41,
+      "combos": 4,
+      "equity": 20.73413,
+      "se": 0.00064,
+      "samples": 2673356458,
+      "rankLow": 41,
+      "rankHigh": 41
+    },
+    {
+      "key": "K7s",
+      "rank": 42,
+      "combos": 4,
+      "equity": 20.67052,
+      "se": 0.00097,
+      "samples": 2673378550,
+      "rankLow": 42,
+      "rankHigh": 42
+    },
+    {
+      "key": "A2s",
+      "rank": 43,
+      "combos": 4,
+      "equity": 20.60183,
+      "se": 0.00071,
+      "samples": 2673372148,
+      "rankLow": 43,
+      "rankHigh": 43
+    },
+    {
+      "key": "T8s",
+      "rank": 44,
+      "combos": 4,
+      "equity": 20.57309,
+      "se": 0.00056,
+      "samples": 2673392426,
+      "rankLow": 44,
+      "rankHigh": 44
+    },
+    {
+      "key": "J8s",
+      "rank": 45,
+      "combos": 4,
+      "equity": 20.50582,
+      "se": 0.00104,
+      "samples": 2673384447,
+      "rankLow": 45,
+      "rankHigh": 45
+    },
+    {
+      "key": "98s",
+      "rank": 46,
+      "combos": 4,
+      "equity": 20.26917,
+      "se": 0.00077,
+      "samples": 2673357504,
+      "rankLow": 46,
+      "rankHigh": 46
+    },
+    {
+      "key": "A9o",
+      "rank": 47,
+      "combos": 12,
+      "equity": 20.22312,
+      "se": 0.00062,
+      "samples": 8020015216,
+      "rankLow": 47,
+      "rankHigh": 47
+    },
+    {
+      "key": "66",
+      "rank": 48,
+      "combos": 6,
+      "equity": 20.09648,
+      "se": 0.00101,
+      "samples": 4010123830,
+      "rankLow": 48,
+      "rankHigh": 48
+    },
+    {
+      "key": "K6s",
+      "rank": 49,
+      "combos": 4,
+      "equity": 20.01553,
+      "se": 0.00061,
+      "samples": 2673371443,
+      "rankLow": 49,
+      "rankHigh": 49
+    },
+    {
+      "key": "K5s",
+      "rank": 50,
+      "combos": 4,
+      "equity": 19.48465,
+      "se": 0.00058,
+      "samples": 2673357480,
+      "rankLow": 50,
+      "rankHigh": 50
+    },
+    {
+      "key": "K9o",
+      "rank": 51,
+      "combos": 12,
+      "equity": 19.43525,
+      "se": 0.00055,
+      "samples": 8020023875,
+      "rankLow": 51,
+      "rankHigh": 51
+    },
+    {
+      "key": "A8o",
+      "rank": 52,
+      "combos": 12,
+      "equity": 19.22371,
+      "se": 0.00097,
+      "samples": 8020111188,
+      "rankLow": 52,
+      "rankHigh": 52
+    },
+    {
+      "key": "Q7s",
+      "rank": 53,
+      "combos": 4,
+      "equity": 19.06467,
+      "se": 0.00086,
+      "samples": 2673405470,
+      "rankLow": 53,
+      "rankHigh": 53
+    },
+    {
+      "key": "K4s",
+      "rank": 54,
+      "combos": 4,
+      "equity": 19.01362,
+      "se": 0.00058,
+      "samples": 2673302671,
+      "rankLow": 54,
+      "rankHigh": 54
+    },
+    {
+      "key": "87s",
+      "rank": 55,
+      "combos": 4,
+      "equity": 18.95281,
+      "se": 0.00083,
+      "samples": 2673391818,
+      "rankLow": 55,
+      "rankHigh": 55
+    },
+    {
+      "key": "Q9o",
+      "rank": 56,
+      "combos": 12,
+      "equity": 18.89153,
+      "se": 0.00088,
+      "samples": 8020068486,
+      "rankLow": 56,
+      "rankHigh": 56
+    },
+    {
+      "key": "T7s",
+      "rank": 57,
+      "combos": 4,
+      "equity": 18.88797,
+      "se": 0.00099,
+      "samples": 2673383154,
+      "rankLow": 57,
+      "rankHigh": 57
+    },
+    {
+      "key": "T9o",
+      "rank": 58,
+      "combos": 12,
+      "equity": 18.88185,
+      "se": 0.00079,
+      "samples": 8020089893,
+      "rankLow": 58,
+      "rankHigh": 58
+    },
+    {
+      "key": "97s",
+      "rank": 59,
+      "combos": 4,
+      "equity": 18.83747,
+      "se": 0.00081,
+      "samples": 2673401391,
+      "rankLow": 59,
+      "rankHigh": 59
+    },
+    {
+      "key": "J7s",
+      "rank": 60,
+      "combos": 4,
+      "equity": 18.81151,
+      "se": 0.00084,
+      "samples": 2673407302,
+      "rankLow": 60,
+      "rankHigh": 60
+    },
+    {
+      "key": "J9o",
+      "rank": 61,
+      "combos": 12,
+      "equity": 18.74122,
+      "se": 0.00098,
+      "samples": 8020180291,
+      "rankLow": 61,
+      "rankHigh": 61
+    },
+    {
+      "key": "K3s",
+      "rank": 62,
+      "combos": 4,
+      "equity": 18.59426,
+      "se": 0.00075,
+      "samples": 2673364911,
+      "rankLow": 62,
+      "rankHigh": 62
+    },
+    {
+      "key": "55",
+      "rank": 63,
+      "combos": 6,
+      "equity": 18.53246,
+      "se": 0.00074,
+      "samples": 4010065989,
+      "rankLow": 63,
+      "rankHigh": 63
+    },
+    {
+      "key": "Q6s",
+      "rank": 64,
+      "combos": 4,
+      "equity": 18.52004,
+      "se": 0.00094,
+      "samples": 2673394645,
+      "rankLow": 64,
+      "rankHigh": 64
+    },
+    {
+      "key": "A7o",
+      "rank": 65,
+      "combos": 12,
+      "equity": 18.29997,
+      "se": 0.00089,
+      "samples": 8020154936,
+      "rankLow": 65,
+      "rankHigh": 65
+    },
+    {
+      "key": "K2s",
+      "rank": 66,
+      "combos": 4,
+      "equity": 18.19515,
+      "se": 0.00043,
+      "samples": 2673376054,
+      "rankLow": 66,
+      "rankHigh": 66
+    },
+    {
+      "key": "A5o",
+      "rank": 67,
+      "combos": 12,
+      "equity": 18.0456,
+      "se": 0.00067,
+      "samples": 8020077442,
+      "rankLow": 67,
+      "rankHigh": 67
+    },
+    {
+      "key": "Q5s",
+      "rank": 68,
+      "combos": 4,
+      "equity": 18.01815,
+      "se": 0.00081,
+      "samples": 2673386984,
+      "rankLow": 68,
+      "rankHigh": 68
+    },
+    {
+      "key": "76s",
+      "rank": 69,
+      "combos": 4,
+      "equity": 17.89577,
+      "se": 0.00068,
+      "samples": 2673446753,
+      "rankLow": 69,
+      "rankHigh": 69
+    },
+    {
+      "key": "86s",
+      "rank": 70,
+      "combos": 4,
+      "equity": 17.64511,
+      "se": 0.00071,
+      "samples": 2673408250,
+      "rankLow": 70,
+      "rankHigh": 70
+    },
+    {
+      "key": "Q4s",
+      "rank": 71,
+      "combos": 4,
+      "equity": 17.56704,
+      "se": 0.00072,
+      "samples": 2673332526,
+      "rankLow": 71,
+      "rankHigh": 71
+    },
+    {
+      "key": "A4o",
+      "rank": 72,
+      "combos": 12,
+      "equity": 17.46848,
+      "se": 0.00067,
+      "samples": 8019952001,
+      "rankLow": 72,
+      "rankHigh": 72
+    },
+    {
+      "key": "A6o",
+      "rank": 73,
+      "combos": 12,
+      "equity": 17.42608,
+      "se": 0.00098,
+      "samples": 8020154934,
+      "rankLow": 73,
+      "rankHigh": 73
+    },
+    {
+      "key": "K8o",
+      "rank": 74,
+      "combos": 12,
+      "equity": 17.38778,
+      "se": 0.00072,
+      "samples": 8020125817,
+      "rankLow": 74,
+      "rankHigh": 74
+    },
+    {
+      "key": "96s",
+      "rank": 75,
+      "combos": 4,
+      "equity": 17.34168,
+      "se": 0.00074,
+      "samples": 2673410003,
+      "rankLow": 75,
+      "rankHigh": 75
+    },
+    {
+      "key": "T6s",
+      "rank": 76,
+      "combos": 4,
+      "equity": 17.33525,
+      "se": 0.00094,
+      "samples": 2673395525,
+      "rankLow": 76,
+      "rankHigh": 76
+    },
+    {
+      "key": "J6s",
+      "rank": 77,
+      "combos": 4,
+      "equity": 17.30649,
+      "se": 0.00104,
+      "samples": 2673400884,
+      "rankLow": 77,
+      "rankHigh": 77
+    },
+    {
+      "key": "44",
+      "rank": 78,
+      "combos": 6,
+      "equity": 17.26737,
+      "se": 0.00089,
+      "samples": 4009969459,
+      "rankLow": 78,
+      "rankHigh": 78
+    },
+    {
+      "key": "Q3s",
+      "rank": 79,
+      "combos": 4,
+      "equity": 17.16032,
+      "se": 0.00087,
+      "samples": 2673413895,
+      "rankLow": 79,
+      "rankHigh": 79
+    },
+    {
+      "key": "65s",
+      "rank": 80,
+      "combos": 4,
+      "equity": 17.04901,
+      "se": 0.00064,
+      "samples": 2673390255,
+      "rankLow": 80,
+      "rankHigh": 80
+    },
+    {
+      "key": "A3o",
+      "rank": 81,
+      "combos": 12,
+      "equity": 16.91935,
+      "se": 0.00091,
+      "samples": 8020192737,
+      "rankLow": 81,
+      "rankHigh": 81
+    },
+    {
+      "key": "T8o",
+      "rank": 82,
+      "combos": 12,
+      "equity": 16.8995,
+      "se": 0.0007,
+      "samples": 8020095307,
+      "rankLow": 82,
+      "rankHigh": 82
+    },
+    {
+      "key": "J5s",
+      "rank": 83,
+      "combos": 4,
+      "equity": 16.89094,
+      "se": 0.00079,
+      "samples": 2673366410,
+      "rankLow": 83,
+      "rankHigh": 83
+    },
+    {
+      "key": "Q8o",
+      "rank": 84,
+      "combos": 12,
+      "equity": 16.84794,
+      "se": 0.00076,
+      "samples": 8020122627,
+      "rankLow": 84,
+      "rankHigh": 84
+    },
+    {
+      "key": "Q2s",
+      "rank": 85,
+      "combos": 4,
+      "equity": 16.77342,
+      "se": 0.00066,
+      "samples": 2673362685,
+      "rankLow": 85,
+      "rankHigh": 85
+    },
+    {
+      "key": "J8o",
+      "rank": 86,
+      "combos": 12,
+      "equity": 16.72413,
+      "se": 0.00103,
+      "samples": 8020166892,
+      "rankLow": 86,
+      "rankHigh": 86
+    },
+    {
+      "key": "75s",
+      "rank": 87,
+      "combos": 4,
+      "equity": 16.69411,
+      "se": 0.00081,
+      "samples": 2673413123,
+      "rankLow": 87,
+      "rankHigh": 87
+    },
+    {
+      "key": "98o",
+      "rank": 88,
+      "combos": 12,
+      "equity": 16.64417,
+      "se": 0.00069,
+      "samples": 8020161656,
+      "rankLow": 88,
+      "rankHigh": 88
+    },
+    {
+      "key": "K7o",
+      "rank": 89,
+      "combos": 12,
+      "equity": 16.6082,
+      "se": 0.00073,
+      "samples": 8020108949,
+      "rankLow": 89,
+      "rankHigh": 89
+    },
+    {
+      "key": "54s",
+      "rank": 90,
+      "combos": 4,
+      "equity": 16.46964,
+      "se": 0.00047,
+      "samples": 2673338127,
+      "rankLow": 90,
+      "rankHigh": 90
+    },
+    {
+      "key": "J4s",
+      "rank": 91,
+      "combos": 4,
+      "equity": 16.45572,
+      "se": 0.00076,
+      "samples": 2673361187,
+      "rankLow": 91,
+      "rankHigh": 91
+    },
+    {
+      "key": "A2o",
+      "rank": 92,
+      "combos": 12,
+      "equity": 16.27992,
+      "se": 0.00063,
+      "samples": 8020107663,
+      "rankLow": 92,
+      "rankHigh": 92
+    },
+    {
+      "key": "85s",
+      "rank": 93,
+      "combos": 4,
+      "equity": 16.26064,
+      "se": 0.00059,
+      "samples": 2673402051,
+      "rankLow": 93,
+      "rankHigh": 94
+    },
+    {
+      "key": "33",
+      "rank": 94,
+      "combos": 6,
+      "equity": 16.25986,
+      "se": 0.00067,
+      "samples": 4010172785,
+      "rankLow": 93,
+      "rankHigh": 94
+    },
+    {
+      "key": "J3s",
+      "rank": 95,
+      "combos": 4,
+      "equity": 16.06135,
+      "se": 0.00084,
+      "samples": 2673416650,
+      "rankLow": 95,
+      "rankHigh": 95
+    },
+    {
+      "key": "T5s",
+      "rank": 96,
+      "combos": 4,
+      "equity": 15.9688,
+      "se": 0.00073,
+      "samples": 2673395444,
+      "rankLow": 96,
+      "rankHigh": 96
+    },
+    {
+      "key": "95s",
+      "rank": 97,
+      "combos": 4,
+      "equity": 15.91756,
+      "se": 0.00076,
+      "samples": 2673354034,
+      "rankLow": 97,
+      "rankHigh": 97
+    },
+    {
+      "key": "K6o",
+      "rank": 98,
+      "combos": 12,
+      "equity": 15.8813,
+      "se": 0.00056,
+      "samples": 8020060645,
+      "rankLow": 98,
+      "rankHigh": 98
+    },
+    {
+      "key": "64s",
+      "rank": 99,
+      "combos": 4,
+      "equity": 15.87143,
+      "se": 0.00052,
+      "samples": 2673381618,
+      "rankLow": 99,
+      "rankHigh": 99
+    },
+    {
+      "key": "J2s",
+      "rank": 100,
+      "combos": 4,
+      "equity": 15.68698,
+      "se": 0.00096,
+      "samples": 2673365748,
+      "rankLow": 100,
+      "rankHigh": 100
+    },
+    {
+      "key": "T4s",
+      "rank": 101,
+      "combos": 4,
+      "equity": 15.60349,
+      "se": 0.00057,
+      "samples": 2673323245,
+      "rankLow": 101,
+      "rankHigh": 101
+    },
+    {
+      "key": "22",
+      "rank": 102,
+      "combos": 6,
+      "equity": 15.48956,
+      "se": 0.00061,
+      "samples": 4010062857,
+      "rankLow": 102,
+      "rankHigh": 102
+    },
+    {
+      "key": "74s",
+      "rank": 103,
+      "combos": 4,
+      "equity": 15.34128,
+      "se": 0.00078,
+      "samples": 2673375442,
+      "rankLow": 103,
+      "rankHigh": 103
+    },
+    {
+      "key": "53s",
+      "rank": 104,
+      "combos": 4,
+      "equity": 15.3251,
+      "se": 0.00053,
+      "samples": 2673418183,
+      "rankLow": 104,
+      "rankHigh": 104
+    },
+    {
+      "key": "K5o",
+      "rank": 105,
+      "combos": 12,
+      "equity": 15.2914,
+      "se": 0.00057,
+      "samples": 8020023328,
+      "rankLow": 105,
+      "rankHigh": 105
+    },
+    {
+      "key": "87o",
+      "rank": 106,
+      "combos": 12,
+      "equity": 15.26412,
+      "se": 0.00084,
+      "samples": 8020261756,
+      "rankLow": 106,
+      "rankHigh": 106
+    },
+    {
+      "key": "T3s",
+      "rank": 107,
+      "combos": 4,
+      "equity": 15.21966,
+      "se": 0.0008,
+      "samples": 2673395116,
+      "rankLow": 107,
+      "rankHigh": 107
+    },
+    {
+      "key": "97o",
+      "rank": 108,
+      "combos": 12,
+      "equity": 15.08046,
+      "se": 0.00082,
+      "samples": 8020200152,
+      "rankLow": 108,
+      "rankHigh": 108
+    },
+    {
+      "key": "T7o",
+      "rank": 109,
+      "combos": 12,
+      "equity": 15.06227,
+      "se": 0.00093,
+      "samples": 8020179511,
+      "rankLow": 109,
+      "rankHigh": 109
+    },
+    {
+      "key": "Q7o",
+      "rank": 110,
+      "combos": 12,
+      "equity": 15.02903,
+      "se": 0.00084,
+      "samples": 8020172290,
+      "rankLow": 110,
+      "rankHigh": 110
+    },
+    {
+      "key": "84s",
+      "rank": 111,
+      "combos": 4,
+      "equity": 14.87932,
+      "se": 0.00067,
+      "samples": 2673344126,
+      "rankLow": 111,
+      "rankHigh": 112
+    },
+    {
+      "key": "J7o",
+      "rank": 112,
+      "combos": 12,
+      "equity": 14.87805,
+      "se": 0.00088,
+      "samples": 8020182541,
+      "rankLow": 111,
+      "rankHigh": 112
+    },
+    {
+      "key": "T2s",
+      "rank": 113,
+      "combos": 4,
+      "equity": 14.85695,
+      "se": 0.00074,
+      "samples": 2673378193,
+      "rankLow": 113,
+      "rankHigh": 113
+    },
+    {
+      "key": "K4o",
+      "rank": 114,
+      "combos": 12,
+      "equity": 14.76113,
+      "se": 0.00061,
+      "samples": 8019953485,
+      "rankLow": 114,
+      "rankHigh": 114
+    },
+    {
+      "key": "43s",
+      "rank": 115,
+      "combos": 4,
+      "equity": 14.73095,
+      "se": 0.00046,
+      "samples": 2673367588,
+      "rankLow": 115,
+      "rankHigh": 115
+    },
+    {
+      "key": "94s",
+      "rank": 116,
+      "combos": 4,
+      "equity": 14.61088,
+      "se": 0.0007,
+      "samples": 2673345861,
+      "rankLow": 116,
+      "rankHigh": 116
+    },
+    {
+      "key": "63s",
+      "rank": 117,
+      "combos": 4,
+      "equity": 14.55502,
+      "se": 0.00062,
+      "samples": 2673418003,
+      "rankLow": 117,
+      "rankHigh": 117
+    },
+    {
+      "key": "Q6o",
+      "rank": 118,
+      "combos": 12,
+      "equity": 14.4188,
+      "se": 0.00098,
+      "samples": 8020147347,
+      "rankLow": 118,
+      "rankHigh": 118
+    },
+    {
+      "key": "K3o",
+      "rank": 119,
+      "combos": 12,
+      "equity": 14.28893,
+      "se": 0.00053,
+      "samples": 8020183347,
+      "rankLow": 119,
+      "rankHigh": 119
+    },
+    {
+      "key": "93s",
+      "rank": 120,
+      "combos": 4,
+      "equity": 14.28658,
+      "se": 0.00061,
+      "samples": 2673416845,
+      "rankLow": 120,
+      "rankHigh": 120
+    },
+    {
+      "key": "76o",
+      "rank": 121,
+      "combos": 12,
+      "equity": 14.15263,
+      "se": 0.00072,
+      "samples": 8020235515,
+      "rankLow": 121,
+      "rankHigh": 121
+    },
+    {
+      "key": "52s",
+      "rank": 122,
+      "combos": 4,
+      "equity": 14.03087,
+      "se": 0.00067,
+      "samples": 2673372609,
+      "rankLow": 122,
+      "rankHigh": 122
+    },
+    {
+      "key": "73s",
+      "rank": 123,
+      "combos": 4,
+      "equity": 14.00379,
+      "se": 0.00062,
+      "samples": 2673455212,
+      "rankLow": 123,
+      "rankHigh": 123
+    },
+    {
+      "key": "92s",
+      "rank": 124,
+      "combos": 4,
+      "equity": 13.93289,
+      "se": 0.0008,
+      "samples": 2673395375,
+      "rankLow": 124,
+      "rankHigh": 124
+    },
+    {
+      "key": "Q5o",
+      "rank": 125,
+      "combos": 12,
+      "equity": 13.86014,
+      "se": 0.00075,
+      "samples": 8020058538,
+      "rankLow": 125,
+      "rankHigh": 125
+    },
+    {
+      "key": "K2o",
+      "rank": 126,
+      "combos": 12,
+      "equity": 13.84399,
+      "se": 0.00041,
+      "samples": 8020108743,
+      "rankLow": 126,
+      "rankHigh": 126
+    },
+    {
+      "key": "86o",
+      "rank": 127,
+      "combos": 12,
+      "equity": 13.83949,
+      "se": 0.00081,
+      "samples": 8020215621,
+      "rankLow": 127,
+      "rankHigh": 127
+    },
+    {
+      "key": "83s",
+      "rank": 128,
+      "combos": 4,
+      "equity": 13.62563,
+      "se": 0.00067,
+      "samples": 2673453000,
+      "rankLow": 128,
+      "rankHigh": 128
+    },
+    {
+      "key": "42s",
+      "rank": 129,
+      "combos": 4,
+      "equity": 13.61534,
+      "se": 0.00038,
+      "samples": 2673375327,
+      "rankLow": 129,
+      "rankHigh": 129
+    },
+    {
+      "key": "96o",
+      "rank": 130,
+      "combos": 12,
+      "equity": 13.45316,
+      "se": 0.00061,
+      "samples": 8020171951,
+      "rankLow": 130,
+      "rankHigh": 130
+    },
+    {
+      "key": "T6o",
+      "rank": 131,
+      "combos": 12,
+      "equity": 13.37351,
+      "se": 0.00072,
+      "samples": 8020162826,
+      "rankLow": 131,
+      "rankHigh": 131
+    },
+    {
+      "key": "Q4o",
+      "rank": 132,
+      "combos": 12,
+      "equity": 13.35014,
+      "se": 0.00083,
+      "samples": 8019992568,
+      "rankLow": 132,
+      "rankHigh": 132
+    },
+    {
+      "key": "82s",
+      "rank": 133,
+      "combos": 4,
+      "equity": 13.32714,
+      "se": 0.00067,
+      "samples": 2673403722,
+      "rankLow": 133,
+      "rankHigh": 133
+    },
+    {
+      "key": "65o",
+      "rank": 134,
+      "combos": 12,
+      "equity": 13.25789,
+      "se": 0.00052,
+      "samples": 8020192728,
+      "rankLow": 134,
+      "rankHigh": 134
+    },
+    {
+      "key": "62s",
+      "rank": 135,
+      "combos": 4,
+      "equity": 13.24687,
+      "se": 0.00058,
+      "samples": 2673396185,
+      "rankLow": 135,
+      "rankHigh": 135
+    },
+    {
+      "key": "J6o",
+      "rank": 136,
+      "combos": 12,
+      "equity": 13.24037,
+      "se": 0.00086,
+      "samples": 8020258813,
+      "rankLow": 136,
+      "rankHigh": 136
+    },
+    {
+      "key": "32s",
+      "rank": 137,
+      "combos": 4,
+      "equity": 13.05957,
+      "se": 0.00047,
+      "samples": 2673426013,
+      "rankLow": 137,
+      "rankHigh": 137
+    },
+    {
+      "key": "Q3o",
+      "rank": 138,
+      "combos": 12,
+      "equity": 12.89131,
+      "se": 0.00087,
+      "samples": 8020208896,
+      "rankLow": 138,
+      "rankHigh": 138
+    },
+    {
+      "key": "75o",
+      "rank": 139,
+      "combos": 12,
+      "equity": 12.84731,
+      "se": 0.00076,
+      "samples": 8020171339,
+      "rankLow": 139,
+      "rankHigh": 139
+    },
+    {
+      "key": "72s",
+      "rank": 140,
+      "combos": 4,
+      "equity": 12.78566,
+      "se": 0.00066,
+      "samples": 2673433276,
+      "rankLow": 140,
+      "rankHigh": 140
+    },
+    {
+      "key": "J5o",
+      "rank": 141,
+      "combos": 12,
+      "equity": 12.77239,
+      "se": 0.0007,
+      "samples": 8020166231,
+      "rankLow": 141,
+      "rankHigh": 141
+    },
+    {
+      "key": "54o",
+      "rank": 142,
+      "combos": 12,
+      "equity": 12.63523,
+      "se": 0.0005,
+      "samples": 8020079560,
+      "rankLow": 142,
+      "rankHigh": 142
+    },
+    {
+      "key": "Q2o",
+      "rank": 143,
+      "combos": 12,
+      "equity": 12.45985,
+      "se": 0.00079,
+      "samples": 8020110071,
+      "rankLow": 143,
+      "rankHigh": 143
+    },
+    {
+      "key": "85o",
+      "rank": 144,
+      "combos": 12,
+      "equity": 12.33695,
+      "se": 0.00053,
+      "samples": 8020192628,
+      "rankLow": 144,
+      "rankHigh": 144
+    },
+    {
+      "key": "J4o",
+      "rank": 145,
+      "combos": 12,
+      "equity": 12.27986,
+      "se": 0.00065,
+      "samples": 8020071715,
+      "rankLow": 145,
+      "rankHigh": 145
+    },
+    {
+      "key": "64o",
+      "rank": 146,
+      "combos": 12,
+      "equity": 11.9753,
+      "se": 0.00034,
+      "samples": 8020107773,
+      "rankLow": 146,
+      "rankHigh": 146
+    },
+    {
+      "key": "95o",
+      "rank": 147,
+      "combos": 12,
+      "equity": 11.90793,
+      "se": 0.00056,
+      "samples": 8020145012,
+      "rankLow": 147,
+      "rankHigh": 147
+    },
+    {
+      "key": "T5o",
+      "rank": 148,
+      "combos": 12,
+      "equity": 11.88999,
+      "se": 0.0007,
+      "samples": 8020088774,
+      "rankLow": 148,
+      "rankHigh": 148
+    },
+    {
+      "key": "J3o",
+      "rank": 149,
+      "combos": 12,
+      "equity": 11.83443,
+      "se": 0.00081,
+      "samples": 8020283627,
+      "rankLow": 149,
+      "rankHigh": 149
+    },
+    {
+      "key": "T4o",
+      "rank": 150,
+      "combos": 12,
+      "equity": 11.47137,
+      "se": 0.00059,
+      "samples": 8019976349,
+      "rankLow": 150,
+      "rankHigh": 150
+    },
+    {
+      "key": "J2o",
+      "rank": 151,
+      "combos": 12,
+      "equity": 11.41518,
+      "se": 0.00077,
+      "samples": 8020179465,
+      "rankLow": 151,
+      "rankHigh": 151
+    },
+    {
+      "key": "53o",
+      "rank": 152,
+      "combos": 12,
+      "equity": 11.39297,
+      "se": 0.00057,
+      "samples": 8020280711,
+      "rankLow": 152,
+      "rankHigh": 152
+    },
+    {
+      "key": "74o",
+      "rank": 153,
+      "combos": 12,
+      "equity": 11.37608,
+      "se": 0.00062,
+      "samples": 8020141078,
+      "rankLow": 153,
+      "rankHigh": 153
+    },
+    {
+      "key": "T3o",
+      "rank": 154,
+      "combos": 12,
+      "equity": 11.03665,
+      "se": 0.0007,
+      "samples": 8020177524,
+      "rankLow": 154,
+      "rankHigh": 154
+    },
+    {
+      "key": "84o",
+      "rank": 155,
+      "combos": 12,
+      "equity": 10.83465,
+      "se": 0.00068,
+      "samples": 8020099970,
+      "rankLow": 155,
+      "rankHigh": 155
+    },
+    {
+      "key": "43o",
+      "rank": 156,
+      "combos": 12,
+      "equity": 10.76134,
+      "se": 0.0004,
+      "samples": 8020184650,
+      "rankLow": 156,
+      "rankHigh": 156
+    },
+    {
+      "key": "T2o",
+      "rank": 157,
+      "combos": 12,
+      "equity": 10.62947,
+      "se": 0.0007,
+      "samples": 8020137415,
+      "rankLow": 157,
+      "rankHigh": 157
+    },
+    {
+      "key": "63o",
+      "rank": 158,
+      "combos": 12,
+      "equity": 10.54841,
+      "se": 0.00045,
+      "samples": 8020306645,
+      "rankLow": 158,
+      "rankHigh": 158
+    },
+    {
+      "key": "94o",
+      "rank": 159,
+      "combos": 12,
+      "equity": 10.48467,
+      "se": 0.00047,
+      "samples": 8020021193,
+      "rankLow": 159,
+      "rankHigh": 159
+    },
+    {
+      "key": "93o",
+      "rank": 160,
+      "combos": 12,
+      "equity": 10.11378,
+      "se": 0.00055,
+      "samples": 8020274263,
+      "rankLow": 160,
+      "rankHigh": 160
+    },
+    {
+      "key": "52o",
+      "rank": 161,
+      "combos": 12,
+      "equity": 9.99442,
+      "se": 0.00061,
+      "samples": 8020164537,
+      "rankLow": 161,
+      "rankHigh": 161
+    },
+    {
+      "key": "73o",
+      "rank": 162,
+      "combos": 12,
+      "equity": 9.92497,
+      "se": 0.00068,
+      "samples": 8020336899,
+      "rankLow": 162,
+      "rankHigh": 162
+    },
+    {
+      "key": "92o",
+      "rank": 163,
+      "combos": 12,
+      "equity": 9.71584,
+      "se": 0.00066,
+      "samples": 8020194362,
+      "rankLow": 163,
+      "rankHigh": 163
+    },
+    {
+      "key": "42o",
+      "rank": 164,
+      "combos": 12,
+      "equity": 9.55569,
+      "se": 0.00031,
+      "samples": 8020064941,
+      "rankLow": 164,
+      "rankHigh": 164
+    },
+    {
+      "key": "83o",
+      "rank": 165,
+      "combos": 12,
+      "equity": 9.47357,
+      "se": 0.00054,
+      "samples": 8020292444,
+      "rankLow": 165,
+      "rankHigh": 165
+    },
+    {
+      "key": "62o",
+      "rank": 166,
+      "combos": 12,
+      "equity": 9.13396,
+      "se": 0.00048,
+      "samples": 8020195107,
+      "rankLow": 166,
+      "rankHigh": 167
+    },
+    {
+      "key": "82o",
+      "rank": 167,
+      "combos": 12,
+      "equity": 9.13355,
+      "se": 0.00072,
+      "samples": 8020160631,
+      "rankLow": 166,
+      "rankHigh": 167
+    },
+    {
+      "key": "32o",
+      "rank": 168,
+      "combos": 12,
+      "equity": 8.95204,
+      "se": 0.00039,
+      "samples": 8020269261,
+      "rankLow": 168,
+      "rankHigh": 168
+    },
+    {
+      "key": "72o",
+      "rank": 169,
+      "combos": 12,
+      "equity": 8.60641,
+      "se": 0.00052,
+      "samples": 8020276695,
+      "rankLow": 169,
+      "rankHigh": 169
+    }
+  ]
+}
