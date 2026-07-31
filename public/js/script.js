@@ -640,8 +640,11 @@ document.addEventListener('DOMContentLoaded', () => {
         // pelaajia, sitä pienempi kulmaero ja sitä enemmän sädettä tarvitaan.
         // Otsikko + kortit + 5 tilastoriviä + palkki. Korttien osuus luetaan
         // tokenista, jotta korkeampi kortti kasvattaa myös pystysäteen.
-        // Hi/Lo:ssa rivejä on kuusi (hi/lo-erittely), joten ruutu on korkeampi.
-        const NON_CARD_BOX_HEIGHT = 136 + (isHiLoGame() ? 18 : 0);
+        // Hi/Lo:ssa rivejä on kolme enemmän (osuus, voitot ja tasapelit
+        // puoliskoittain), joten ruutu on sen verran korkeampi.
+        const HILO_EXTRA_ROWS = 3;
+        const STAT_ROW_HEIGHT = 18;
+        const NON_CARD_BOX_HEIGHT = 136 + (isHiLoGame() ? HILO_EXTRA_ROWS * STAT_ROW_HEIGHT : 0);
         const PLAYER_BOX_HEIGHT = NON_CARD_BOX_HEIGHT + cardMetrics(cardsPerPlayer).h;
         // Sekoitus- ja fold-napit istuvat ruudun oikean reunan ulkopuolella:
         // CSS asettaa ne right: -24px, ja .player-input:n 8 px padding syö
@@ -742,13 +745,20 @@ document.addEventListener('DOMContentLoaded', () => {
             playerStats.classList.add('player-stats');
             playerStats.id = `player${i}Stats`;
             // Hi/Lo:ssa "voitto" tarkoittaa koko potin scooppaamista ja
-            // "tasapeli" mitä tahansa osapottia; lisäksi näytetään potin
-            // puoliskojen erittely omalla rivillään
+            // "tasapeli" mitä tahansa osapottia. Puoliskoista näytetään
+            // kaksi eri suuretta omilla riveillään: osuus potista (mistä
+            // equity muodostuu) ja voittotaajuus (kuinka usein puolisko
+            // voitetaan yksin tai jaetaan). Kaikilla kolmella rivillä
+            // ensimmäinen luku on hi ja toinen lo.
+            const hiloRows = isHiLoGame() ? `
+                <div class="stat-row aux-row"><span class="label">${t('sim.stat.hiloShare')}</span> <span class="value hilo-value">-</span></div>
+                <div class="stat-row aux-row"><span class="label">${t('sim.stat.hiloWin')}</span> <span class="value hilowin-value">-</span></div>
+                <div class="stat-row aux-row"><span class="label">${t('sim.stat.hiloTie')}</span> <span class="value hilotie-value">-</span></div>` : '';
             playerStats.innerHTML = `
                 <div class="stat-row"><span class="label">${t(isHiLoGame() ? 'sim.stat.scoop' : 'sim.stat.win')}</span> <span class="value win-value">-</span></div>
                 <div class="stat-row"><span class="label">${t(isHiLoGame() ? 'sim.stat.split' : 'sim.stat.tie')}</span> <span class="value tie-value">-</span></div>
                 <div class="stat-row"><span class="label">${t('sim.stat.equity')}</span> <span class="value equity-value">-</span></div>
-                ${isHiLoGame() ? `<div class="stat-row aux-row"><span class="label">${t('sim.stat.hilo')}</span> <span class="value hilo-value">-</span></div>` : ''}
+                ${hiloRows}
                 <div class="stat-row aux-row"><span class="label">${t('sim.stat.se')}</span> <span class="value se-value">-</span></div>
                 <div class="stat-row aux-row"><span class="label">${t('sim.stat.exact')}</span> <span class="value exact-value">-</span></div>
                 <div class="mini-progress-container"><div class="mini-progress-bar"></div></div>
@@ -1184,13 +1194,15 @@ document.addEventListener('DOMContentLoaded', () => {
         playerHandsData.forEach((playerData, index) => {
             const playerStats = document.getElementById(`player${index}Stats`);
             if (playerStats) {
-                const hiloEl = playerStats.querySelector('.hilo-value');
+                const hiloEls = ['.hilo-value', '.hilowin-value', '.hilotie-value']
+                    .map(s => playerStats.querySelector(s));
+                const clearHiLo = () => hiloEls.forEach(el => { if (el) el.textContent = '-'; });
                 if (playerData.isFolded) {
                     playerStats.querySelector('.win-value').textContent = t('sim.folded');
                     playerStats.querySelector('.tie-value').textContent = '-';
                     playerStats.querySelector('.equity-value').textContent = '-';
                     playerStats.querySelector('.se-value').textContent = '-';
-                    if (hiloEl) hiloEl.textContent = '-';
+                    clearHiLo();
                     playerStats.querySelector('.mini-progress-bar').style.width = '0%';
                 } else if (isRandomOpponents && index > 0) {
                     // Tuntemattomien vastustajien todennäköisyyksiä ei näytetä:
@@ -1199,7 +1211,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     playerStats.querySelector('.tie-value').textContent = '-';
                     playerStats.querySelector('.equity-value').textContent = '-';
                     playerStats.querySelector('.se-value').textContent = '-';
-                    if (hiloEl) hiloEl.textContent = '-';
+                    clearHiLo();
                     playerStats.querySelector('.mini-progress-bar').style.width = '0%';
                 } else {
                     const winPercent = winPercentages[index].toFixed(2);
@@ -1213,12 +1225,19 @@ document.addEventListener('DOMContentLoaded', () => {
                     playerStats.querySelector('.se-value').textContent =
                         se > 0 ? `± ${se.toFixed(2)}` : '-';
 
-                    // Hi/Lo-erittely: potin puoliskojen osuudet. Hi sisältää
-                    // koko potin kierroksilta joilla low'ta ei ollut, joten
-                    // hi + lo = equity.
-                    if (hiloEl && Array.isArray(results.hiEquityPercentages)) {
-                        hiloEl.textContent =
-                            `${results.hiEquityPercentages[index].toFixed(1)} / ${results.loEquityPercentages[index].toFixed(1)}`;
+                    // Hi/Lo-rivit. Osuus: kuinka suuren osan koko potista
+                    // pelaaja saa kummankin puoliskon kautta (hi sisältää
+                    // koko potin kun low'ta ei syntynyt, joten hi + lo =
+                    // equity). Voitto/tasan: kuinka usein puolisko voitetaan
+                    // yksin tai jaetaan - eri suure, koska hi-voitto tuo
+                    // koko potin vain low-kelvottomalla pöydällä.
+                    const pair = (a, b) => `${a[index].toFixed(1)} / ${b[index].toFixed(1)}`;
+                    if (hiloEls[0] && Array.isArray(results.hiEquityPercentages)) {
+                        hiloEls[0].textContent = pair(results.hiEquityPercentages, results.loEquityPercentages);
+                    }
+                    if (hiloEls[1] && Array.isArray(results.hiWinPercentages)) {
+                        hiloEls[1].textContent = pair(results.hiWinPercentages, results.loWinPercentages);
+                        hiloEls[2].textContent = pair(results.hiTiePercentages, results.loTiePercentages);
                     }
 
                     const progressBar = playerStats.querySelector('.mini-progress-bar');
@@ -1232,9 +1251,10 @@ document.addEventListener('DOMContentLoaded', () => {
         displayHeroLowLine(results.hiLoStats || null, simulationCount);
     }
 
-    // Heron low-rivi käsijakauman alla: kuinka usein low syntyi, kuinka
-    // usein se voitti (tai jakoi) low-puoliskon ja kuinka usein pöytä jäi
-    // kokonaan ilman low'ta. Näytetään vain Hi/Lo-pelissä.
+    // Heron low-rivi käsijakauman alla: kuinka usein hero sai kelvollisen
+    // low'n ja kuinka usein pöytä jäi kokonaan ilman low'ta. Low-puoliskon
+    // voittaminen ja jakaminen näkyvät pelaajaruudun omilla riveillään,
+    // joten niitä ei toisteta tässä. Näytetään vain Hi/Lo-pelissä.
     function displayHeroLowLine(hiLoStats, simulationCount) {
         const el = document.getElementById('heroLowLine');
         if (!el) return;
@@ -1245,7 +1265,6 @@ document.addEventListener('DOMContentLoaded', () => {
         const pct = x => ((100 * x) / simulationCount).toFixed(1);
         el.textContent = t('sim.lowLine', {
             made: pct(hiLoStats.heroLowMade),
-            won: pct(hiLoStats.heroLowWon),
             nolow: pct(hiLoStats.noLowRounds)
         });
     }
@@ -1307,8 +1326,8 @@ document.addEventListener('DOMContentLoaded', () => {
             element.querySelector('.equity-value').textContent = '-';
             element.querySelector('.se-value').textContent = '-';
             element.querySelector('.exact-value').textContent = '-';
-            const hiloEl = element.querySelector('.hilo-value');
-            if (hiloEl) hiloEl.textContent = '-';
+            element.querySelectorAll('.hilo-value, .hilowin-value, .hilotie-value')
+                .forEach(el => { el.textContent = '-'; });
             element.querySelector('.mini-progress-bar').style.width = '0%';
         });
         // Palauta käsijakauma placeholder-tilaan (harmaa palkki, viivat)

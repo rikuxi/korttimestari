@@ -476,12 +476,26 @@
         // Neliösumma keskivirhettä varten: kierrokset ovat riippumattomia,
         // joten osuuksien otosvarianssi antaa suoraan estimaatin tarkkuudesta
         const equitySq = new Array(playerCount).fill(0);
-        // Hi/Lo: potin puolikkaat erikseen, jotta erittely voidaan näyttää.
-        // hiSums sisältää koko potin silloin kun low'ta ei ole - näin
-        // hiSums + loSums = equitySums pätee aina.
-        const hiSums = isHiLo ? new Array(playerCount).fill(0) : null;
-        const loSums = isHiLo ? new Array(playerCount).fill(0) : null;
-        const hiLoCounts = isHiLo ? { heroLowMade: 0, heroLowWon: 0, noLowRounds: 0 } : null;
+        // Hi/Lo:sta kerätään kahdenlaista tietoa, koska ne vastaavat eri
+        // kysymykseen:
+        //   - osuudet (hiSums/loSums): kuinka suuren osan KOKO potista
+        //     pelaaja saa kummankin puoliskon kautta. hiSums sisältää koko
+        //     potin silloin kun low'ta ei syntynyt, joten
+        //     hiSums + loSums = equitySums pätee aina.
+        //   - taajuudet (hiWins/hiTies/loWins/loTies): kuinka USEIN pelaaja
+        //     voittaa puoliskon yksin tai jakaa sen. Tämä on se luku jonka
+        //     muut laskurit yleensä näyttävät; se ei kerro puoliskon arvoa,
+        //     koska hi-voitto tuo koko potin vain kun low'ta ei ole.
+        const hilo = isHiLo ? {
+            hiSums: new Array(playerCount).fill(0),
+            loSums: new Array(playerCount).fill(0),
+            hiWins: new Array(playerCount).fill(0),
+            hiTies: new Array(playerCount).fill(0),
+            loWins: new Array(playerCount).fill(0),
+            loTies: new Array(playerCount).fill(0),
+            heroLowMade: 0,
+            noLowRounds: 0
+        } : null;
 
         if (active.length === 0) {
             throw new Error('No active players with cards');
@@ -490,16 +504,15 @@
             throw new Error('Not enough cards in deck');
         }
         if (active.length === 1) {
-            // Yksi pelaaja jäljellä - voittaa aina ilman laskentaa
+            // Yksi pelaaja jäljellä - voittaa aina ilman laskentaa.
+            // Hi/Lo-erittelyä ei anneta: yhtään pöytää ei jaeta, joten
+            // puoliskojen osuuksista tai low-taajuuksista ei ole tietoa.
+            // Keksitty "hi 100 % / ei low'ta 100 %" olisi väärä väite.
             winCounts[active[0]] = simulationCount;
             equitySums[active[0]] = simulationCount;
             equitySq[active[0]] = simulationCount;
-            if (isHiLo) {
-                hiSums[active[0]] = simulationCount;
-                hiLoCounts.noLowRounds = simulationCount;
-            }
-            return finish(winCounts, tieCounts, equitySums, equitySq, simulationCount, heroHandStats,
-                hiSums, loSums, hiLoCounts);
+            return finish(winCounts, tieCounts, equitySums, equitySq, simulationCount,
+                heroHandStats, null);
         }
 
         // Uudelleenkäytettävät puskurit
@@ -570,11 +583,8 @@
             if (isHiLo) {
                 // Jaettu potti: puolet parhaalle hi-kädelle, puolet parhaalle
                 // low'lle. Jos kukaan ei tee low'ta, hi vie koko potin.
-                if (loWinnerCount === 0) hiLoCounts.noLowRounds++;
-                if (state[0] !== 0) {
-                    if (loValues[0] !== NO_LOW) hiLoCounts.heroLowMade++;
-                    if (loWinnerCount > 0 && loValues[0] === loMin) hiLoCounts.heroLowWon++;
-                }
+                if (loWinnerCount === 0) hilo.noLowRounds++;
+                if (state[0] !== 0 && loValues[0] !== NO_LOW) hilo.heroLowMade++;
                 for (let a = 0; a < active.length; a++) {
                     const idx = active[a];
                     const hiShare = values[idx] === maxValue ? 1 / winnerCount : 0;
@@ -586,11 +596,18 @@
                         hiPart = 0.5 * hiShare;
                         loPart = loValues[idx] === loMin ? 0.5 / loWinnerCount : 0;
                     }
+                    // Taajuudet: yksin voitettu vs. jaettu puolisko
+                    if (values[idx] === maxValue) {
+                        if (winnerCount === 1) hilo.hiWins[idx]++; else hilo.hiTies[idx]++;
+                    }
+                    if (loWinnerCount > 0 && loValues[idx] === loMin) {
+                        if (loWinnerCount === 1) hilo.loWins[idx]++; else hilo.loTies[idx]++;
+                    }
                     const share = hiPart + loPart;
                     if (share === 1) winCounts[idx]++;
                     else if (share > 0) tieCounts[idx]++;
-                    hiSums[idx] += hiPart;
-                    loSums[idx] += loPart;
+                    hilo.hiSums[idx] += hiPart;
+                    hilo.loSums[idx] += loPart;
                     equitySums[idx] += share;
                     equitySq[idx] += share * share;
                 }
@@ -612,12 +629,12 @@
             }
         }
 
-        return finish(winCounts, tieCounts, equitySums, equitySq, simulationCount, heroHandStats,
-            hiSums, loSums, hiLoCounts);
+        return finish(winCounts, tieCounts, equitySums, equitySq, simulationCount,
+            heroHandStats, hilo);
     }
 
-    function finish(winCounts, tieCounts, equitySums, equitySq, simulationCount, heroHandStats,
-        hiSums, loSums, hiLoCounts) {
+    function finish(winCounts, tieCounts, equitySums, equitySq, simulationCount,
+        heroHandStats, hilo) {
         const n = simulationCount;
         const result = {
             winCounts,
@@ -636,16 +653,22 @@
             simulationCount,
             heroHandStats
         };
-        if (hiSums) {
-            // Hi/Lo-erittely: hiEquity sisältää koko potin kun low'ta ei
-            // ollut, joten hi + lo = equity. winCounts = scooppasi koko potin,
+        if (hilo) {
+            // Osuudet: hiEquity sisältää koko potin kun low'ta ei ollut,
+            // joten hi + lo = equity. winCounts = scooppasi koko potin,
             // tieCounts = sai osan potista.
-            result.hiEquityPercentages = hiSums.map(e => (e / n) * 100);
-            result.loEquityPercentages = loSums.map(e => (e / n) * 100);
+            result.hiEquityPercentages = hilo.hiSums.map(e => (e / n) * 100);
+            result.loEquityPercentages = hilo.loSums.map(e => (e / n) * 100);
+            // Taajuudet: kuinka usein puolisko voitetaan yksin tai jaetaan.
+            // Eri suure kuin osuus - hi-voitto tuo koko potin vain kun
+            // kukaan ei tehnyt low'ta.
+            result.hiWinPercentages = hilo.hiWins.map(w => (w / n) * 100);
+            result.hiTiePercentages = hilo.hiTies.map(t => (t / n) * 100);
+            result.loWinPercentages = hilo.loWins.map(w => (w / n) * 100);
+            result.loTiePercentages = hilo.loTies.map(t => (t / n) * 100);
             result.hiLoStats = {
-                heroLowMade: hiLoCounts.heroLowMade,
-                heroLowWon: hiLoCounts.heroLowWon,
-                noLowRounds: hiLoCounts.noLowRounds
+                heroLowMade: hilo.heroLowMade,
+                noLowRounds: hilo.noLowRounds
             };
         }
         return result;
@@ -721,22 +744,28 @@
         const winCounts = new Array(playerCount).fill(0);
         const tieCounts = new Array(playerCount).fill(0);
         const equityNumerators = new Array(playerCount).fill(0);
-        const hiNumerators = isHiLo ? new Array(playerCount).fill(0) : null;
-        const loNumerators = isHiLo ? new Array(playerCount).fill(0) : null;
-        const hiLoCounts = isHiLo ? { heroLowMade: 0, heroLowWon: 0, noLowRounds: 0 } : null;
+        // Sama kahtiajako kuin runSimulationissa: osuudet potista ja
+        // taajuudet puoliskojen voittamiselle (ks. runSimulation)
+        const hilo = isHiLo ? {
+            hiNumerators: new Array(playerCount).fill(0),
+            loNumerators: new Array(playerCount).fill(0),
+            hiWins: new Array(playerCount).fill(0),
+            hiTies: new Array(playerCount).fill(0),
+            loWins: new Array(playerCount).fill(0),
+            loTies: new Array(playerCount).fill(0),
+            heroLowMade: 0,
+            noLowRounds: 0
+        } : null;
         const heroHandStats = {};
 
         const totalBoards = binomial(deckLen, boardNeeded);
 
         if (active.length === 1) {
+            // Ei pöytiä käytävänä läpi -> hi/lo-erittelyä ei ole olemassa
             winCounts[active[0]] = totalBoards;
             equityNumerators[active[0]] = totalBoards * LCM_SHARE;
-            if (isHiLo) {
-                hiNumerators[active[0]] = totalBoards * LCM_SHARE;
-                hiLoCounts.noLowRounds = totalBoards;
-            }
-            return exactResult(winCounts, tieCounts, equityNumerators, totalBoards, heroHandStats,
-                hiNumerators, loNumerators, hiLoCounts);
+            return exactResult(winCounts, tieCounts, equityNumerators, totalBoards,
+                heroHandStats, null);
         }
 
         const board = new Int32Array(5);
@@ -788,11 +817,8 @@
                 // Osoittajat kokonaislukuina yksikössä 1/LCM_SHARE:
                 // puolikas potti on LCM_SHARE/2, ja sekin jakautuu tasan
                 // korkeintaan 10 voittajalle (5040/2/k on kokonaisluku)
-                if (loWinnerCount === 0) hiLoCounts.noLowRounds++;
-                if (state[0] !== 0) {
-                    if (loValues[0] !== NO_LOW) hiLoCounts.heroLowMade++;
-                    if (loWinnerCount > 0 && loValues[0] === loMin) hiLoCounts.heroLowWon++;
-                }
+                if (loWinnerCount === 0) hilo.noLowRounds++;
+                if (state[0] !== 0 && loValues[0] !== NO_LOW) hilo.heroLowMade++;
                 for (let a = 0; a < active.length; a++) {
                     const i = active[a];
                     let hiPart = 0, loPart = 0;
@@ -800,15 +826,17 @@
                         hiPart = loWinnerCount === 0
                             ? LCM_SHARE / winnerCount
                             : (LCM_SHARE / 2) / winnerCount;
+                        if (winnerCount === 1) hilo.hiWins[i]++; else hilo.hiTies[i]++;
                     }
                     if (loWinnerCount > 0 && loValues[i] === loMin) {
                         loPart = (LCM_SHARE / 2) / loWinnerCount;
+                        if (loWinnerCount === 1) hilo.loWins[i]++; else hilo.loTies[i]++;
                     }
                     const share = hiPart + loPart;
                     if (share === LCM_SHARE) winCounts[i]++;
                     else if (share > 0) tieCounts[i]++;
-                    hiNumerators[i] += hiPart;
-                    loNumerators[i] += loPart;
+                    hilo.hiNumerators[i] += hiPart;
+                    hilo.loNumerators[i] += loPart;
                     equityNumerators[i] += share;
                 }
             } else {
@@ -835,8 +863,8 @@
             for (let j = i + 1; j < boardNeeded; j++) idx[j] = idx[j - 1] + 1;
         }
 
-        return exactResult(winCounts, tieCounts, equityNumerators, totalBoards, heroHandStats,
-            hiNumerators, loNumerators, hiLoCounts);
+        return exactResult(winCounts, tieCounts, equityNumerators, totalBoards,
+            heroHandStats, hilo);
     }
 
     // Pienin yhteinen jaettava, jotta osuudet pysyvät kokonaislukuina eikä
@@ -846,8 +874,8 @@
     // ei ole kokonaisluku).
     const LCM_SHARE = 5040;
 
-    function exactResult(winCounts, tieCounts, equityNumerators, totalBoards, heroHandStats,
-        hiNumerators, loNumerators, hiLoCounts) {
+    function exactResult(winCounts, tieCounts, equityNumerators, totalBoards,
+        heroHandStats, hilo) {
         const denom = totalBoards * LCM_SHARE;
         const result = {
             exact: true,
@@ -863,13 +891,16 @@
             simulationCount: totalBoards,
             heroHandStats
         };
-        if (hiNumerators) {
-            result.hiEquityPercentages = hiNumerators.map(e => (e / denom) * 100);
-            result.loEquityPercentages = loNumerators.map(e => (e / denom) * 100);
+        if (hilo) {
+            result.hiEquityPercentages = hilo.hiNumerators.map(e => (e / denom) * 100);
+            result.loEquityPercentages = hilo.loNumerators.map(e => (e / denom) * 100);
+            result.hiWinPercentages = hilo.hiWins.map(w => (w / totalBoards) * 100);
+            result.hiTiePercentages = hilo.hiTies.map(t => (t / totalBoards) * 100);
+            result.loWinPercentages = hilo.loWins.map(w => (w / totalBoards) * 100);
+            result.loTiePercentages = hilo.loTies.map(t => (t / totalBoards) * 100);
             result.hiLoStats = {
-                heroLowMade: hiLoCounts.heroLowMade,
-                heroLowWon: hiLoCounts.heroLowWon,
-                noLowRounds: hiLoCounts.noLowRounds
+                heroLowMade: hilo.heroLowMade,
+                noLowRounds: hilo.noLowRounds
             };
         }
         return result;

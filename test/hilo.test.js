@@ -132,6 +132,11 @@ test('hi/lo eksakti: kvarttaus riverillä (hero 1/4, vastustaja 3/4)', () => {
     // Kumpikaan ei scoopannut - molemmat saivat osapotin
     assert.deepStrictEqual(r.winCounts, [0, 0]);
     assert.deepStrictEqual(r.tieCounts, [1, 1]);
+    // Taajuudet: vastustaja vei hi:n yksin, low jaettiin
+    assert.deepStrictEqual(r.hiWinPercentages, [0, 100]);
+    assert.deepStrictEqual(r.hiTiePercentages, [0, 0]);
+    assert.deepStrictEqual(r.loWinPercentages, [0, 0]);
+    assert.deepStrictEqual(r.loTiePercentages, [100, 100]);
 });
 
 test('hi/lo eksakti: paras hi ja paras lo scooppaa koko potin', () => {
@@ -148,7 +153,11 @@ test('hi/lo eksakti: paras hi ja paras lo scooppaa koko potin', () => {
     assert.deepStrictEqual(r.winCounts, [1, 0]);
     assert.deepStrictEqual(r.tieCounts, [0, 0]);
     assert.strictEqual(r.hiLoStats.heroLowMade, 1);
-    assert.strictEqual(r.hiLoStats.heroLowWon, 1);
+    // Scoop tarkoittaa molempien puoliskojen voittamista yksin
+    assert.deepStrictEqual(r.hiWinPercentages, [100, 0]);
+    assert.deepStrictEqual(r.loWinPercentages, [100, 0]);
+    assert.deepStrictEqual(r.hiTiePercentages, [0, 0]);
+    assert.deepStrictEqual(r.loTiePercentages, [0, 0]);
 });
 
 test('hi/lo eksakti: ilman low-pöytää tulos on sama kuin Omahassa', () => {
@@ -252,4 +261,99 @@ test('hi/lo: exactPlan tuntee pelimuodon ja satunnaisvastustajat toimivat', () =
     assert.ok(r.equityPercentages[0] > 25 && r.equityPercentages[0] < 60,
         'A234 ds equity 4-max: ' + r.equityPercentages[0].toFixed(1));
     assert.ok(r.hiLoStats.heroLowMade > 0);
+});
+
+// --- Voitto- ja tasapelitaajuudet ---------------------------------------
+
+test('hi/lo-taajuudet vastaavat ulkoista laskuria (cardplayer.com)', () => {
+    // Vertailutilanne cardplayer.com:n Omaha Hi/Lo -laskurista.
+    // Kaikki 1 086 008 pöytää enumeroidaan, joten luvut ovat tarkkoja
+    // eivätkä otoksesta riippuvia. Tämä on ainoa testi joka sitoo
+    // taajuudet ulkopuoliseen lähteeseen - jos jako- tai vertailulogiikka
+    // muuttuu, se näkyy tässä heti.
+    const r = E.enumerateExact({
+        playerHandsData: [
+            { hand: ['Jc', '2s', 'Qh', 'Kc'], isFolded: false },
+            { hand: ['8c', 'As', '5d', 'Js'], isFolded: false }
+        ],
+        communityCards: empty, gameType: 'omahahilo', randomOpponents: false
+    });
+    const r2 = x => Number(x.toFixed(2));
+    assert.strictEqual(r.boards, E.binomial(44, 5));
+    assert.deepStrictEqual(r.winPercentages.map(r2), [25.49, 54.22]);       // Scoop
+    assert.deepStrictEqual(r.hiWinPercentages.map(r2), [45.50, 54.22]);     // Hi
+    assert.deepStrictEqual(r.hiTiePercentages.map(r2), [0.29, 0.29]);       // Hi Tie
+    assert.deepStrictEqual(r.loWinPercentages.map(r2), [0, 54.01]);         // Lo
+    assert.deepStrictEqual(r.loTiePercentages.map(r2), [0, 0]);             // Lo Tie
+    assert.deepStrictEqual(r.equityPercentages.map(r2), [35.64, 64.36]);    // Ev
+});
+
+test('taajuudet ovat johdonmukaisia osuuksien ja scoopin kanssa', () => {
+    // Kolme pelaajaa, jotta kolmisuuntaiset jaot tulevat mukaan
+    const r = E.runSimulation({
+        playerHandsData: [
+            { hand: ['As', '2s', '3h', '4h'], isFolded: false },
+            { hand: ['Ad', '2d', 'Kc', 'Kd'], isFolded: false },
+            { hand: ['Ts', 'Jc', 'Qd', '9h'], isFolded: false }
+        ],
+        communityCards: empty, gameType: 'omahahilo',
+        randomOpponents: false, simulationCount: 30000
+    });
+    const sum = a => a.reduce((x, y) => x + y, 0);
+
+    // Jokaisella kierroksella hi-puolisko joko voitetaan yksin (tasan yksi
+    // pelaaja saa merkinnän) tai jaetaan (vähintään kaksi saa). Siksi
+    // yksin voitettujen osuus on korkeintaan 100 % ja voittojen sekä
+    // jakojen summa vähintään 100 %.
+    const hiWin = sum(r.hiWinPercentages), hiTie = sum(r.hiTiePercentages);
+    assert.ok(hiWin <= 100 + 1e-9, `hi-voittoja ${hiWin} %`);
+    assert.ok(hiWin + hiTie >= 100 - 1e-9, `hi-voitot + jaot ${hiWin + hiTie} %`);
+
+    // Low-puoliskolla sama, mutta vain niillä kierroksilla joilla low syntyi
+    const lowRounds = 100 - (100 * r.hiLoStats.noLowRounds) / r.simulationCount;
+    const loWin = sum(r.loWinPercentages), loTie = sum(r.loTiePercentages);
+    assert.ok(loWin <= lowRounds + 1e-9, 'low-voittoja enemmän kuin low-kierroksia');
+    assert.ok(loWin + loTie >= lowRounds - 1e-9, 'low-kierroksia ilman low-voittajaa');
+    assert.ok(lowRounds > 0 && lowRounds < 100, 'testitilanteessa pitää esiintyä molempia');
+
+    for (let i = 0; i < 3; i++) {
+        // Scoop vaatii hi-puoliskon voittamisen yksin
+        assert.ok(r.winPercentages[i] <= r.hiWinPercentages[i] + 1e-9,
+            'scoop ei voi olla yleisempi kuin hi:n voittaminen yksin');
+        // Osuus ei voi ylittää taajuutta: kierros tuottaa hi-osuutta vain
+        // jos pelaaja voitti tai jakoi hi:n, ja korkeintaan koko potin
+        assert.ok(r.hiEquityPercentages[i] <=
+            r.hiWinPercentages[i] + r.hiTiePercentages[i] + 1e-9);
+        assert.ok(r.loEquityPercentages[i] <=
+            r.loWinPercentages[i] + r.loTiePercentages[i] + 1e-9);
+        // Pelaaja jolla ei ole low-kortteja ei voi voittaa low-puoliskoa
+        assert.ok(r.loWinPercentages[i] >= 0 && r.loTiePercentages[i] >= 0);
+    }
+    // Kolmas käsi (TJQ9) ei voi tehdä low'ta lainkaan
+    assert.strictEqual(r.loWinPercentages[2], 0);
+    assert.strictEqual(r.loTiePercentages[2], 0);
+    assert.strictEqual(r.loEquityPercentages[2], 0);
+});
+
+test('yhden aktiivisen pelaajan tilanteessa hi/lo-erittelyä ei keksitä', () => {
+    // Kaikki muut foldanneet: equity on 100 %, mutta yhtään pöytää ei
+    // jaeta, joten puoliskojen osuuksista ei ole tietoa. Aiemmin tässä
+    // väitettiin "hi 100 % / ei low'ta 100 %".
+    const table = {
+        playerHandsData: [
+            { hand: ['As', '2s', '3h', '4h'], isFolded: false },
+            { hand: ['Kd', 'Kc', 'Qs', 'Jh'], isFolded: true }
+        ],
+        communityCards: empty, gameType: 'omahahilo', randomOpponents: false
+    };
+    const mc = E.runSimulation({ ...table, simulationCount: 1000 });
+    assert.strictEqual(mc.equityPercentages[0], 100);
+    assert.strictEqual(mc.hiEquityPercentages, undefined);
+    assert.strictEqual(mc.hiWinPercentages, undefined);
+    assert.strictEqual(mc.hiLoStats, undefined);
+
+    const ex = E.enumerateExact(table);
+    assert.strictEqual(ex.equityPercentages[0], 100);
+    assert.strictEqual(ex.hiEquityPercentages, undefined);
+    assert.strictEqual(ex.hiLoStats, undefined);
 });

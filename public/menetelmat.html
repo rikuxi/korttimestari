@@ -170,11 +170,28 @@
             Tuloksissa <strong>equity</strong> on pelaajan keskimääräinen
             osuus potista, <strong>scoop</strong> on koko potin vieminen
             yksin ja <strong>osapotti</strong> mikä tahansa jaettu osuus
-            (esimerkiksi neljännes, kun low menee tasan). Hi/Lo-rivi
-            erittelee equityn puoliskoittain: hi-osuus sisältää koko potin
-            niiltä kierroksilta, joilla low'ta ei syntynyt, joten hi + lo =
-            equity. Tarkka enumerointi toimii Hi/Lo:ssa samoin kuin muissa
-            pelimuodoissa, kun kaikkien pelaajien kortit ovat tiedossa.
+            (esimerkiksi neljännes, kun low menee tasan). Tarkka enumerointi
+            toimii Hi/Lo:ssa samoin kuin muissa pelimuodoissa, kun kaikkien
+            pelaajien kortit ovat tiedossa.
+        </p>
+        <p>
+            Puoliskoista näytetään <strong>kaksi eri suuretta</strong>, ja
+            ne on helppo sekoittaa keskenään. <em>Osuus hi/lo</em> kertoo,
+            kuinka suuren osan koko potista pelaaja saa kummankin puoliskon
+            kautta; hi-osuus sisältää koko potin niiltä kierroksilta joilla
+            low'ta ei syntynyt, joten hi + lo = equity. <em>Voitto hi/lo</em>
+            ja <em>Tasan hi/lo</em> ovat sen sijaan taajuuksia: kuinka usein
+            pelaaja voittaa puoliskon yksin tai jakaa sen. Kaikilla kolmella
+            rivillä ensimmäinen luku on hi ja toinen lo.
+        </p>
+        <p>
+            Suureet eroavat, koska hi-puoliskon voittaminen on eriarvoista
+            eri pöydillä: low-kelvottomalla pöydällä se tuo koko potin,
+            low-pöydällä vain puolikkaan. Esimerkiksi kädellä JQK2 yhtä
+            satunnaista kättä vastaan hi-voiton taajuus on 45,50 % mutta
+            hi-osuus potista 35,64 %, koska 54,01 % pöydistä mahdollistaa
+            low'n. Muut laskurit näyttävät yleensä taajuudet; equity (EV) on
+            molemmissa sama.
         </p>
         <p>
             Hi/Lo:n heads-up-preflop-taulukko on laskettu eksaktisti samalla
