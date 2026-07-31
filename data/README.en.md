@@ -3,8 +3,9 @@
 *Read this in Finnish: [README.md](README.md)*
 
 The tables cover every hand class at every player count: Hold'em
-(169 classes, 2–10 players), Omaha (16,432 classes, 2–9 players) and
-five-card Omaha (134,459 classes, 2–9 players) — with equities,
+(169 classes, 2–10 players), Omaha (16,432 classes, 2–9 players),
+five-card Omaha (134,459 classes, 2–9 players) and Omaha Hi/Lo
+8-or-better (16,432 classes, heads-up) — with equities,
 standard errors and rank uncertainty ranges. The data is free to use
 under the [CC BY 4.0](LICENSE) license.
 
@@ -45,6 +46,7 @@ and `.csv` for humans. The method and precision are in each file's
 | `preflop-omaha5-7max-hybrid` | Omaha5 | 7 | hybrid | ± 0.0067 pp |
 | `preflop-omaha5-8max-hybrid` | Omaha5 | 8 | hybrid | ± 0.0058 pp |
 | `preflop-omaha5-9max-hybrid` | Omaha5 | 9 | hybrid | ± 0.0051 pp |
+| `preflop-omahahilo-2max-exact` | Omaha Hi/Lo | 2 | exact | **exact fraction** |
 
 **Exact** = all C(52,5) = 2,598,960 boards and all opponent hands are
 enumerated; the result is an exact fraction, and
@@ -53,6 +55,19 @@ enumerated; the result is an exact fraction, and
 removal; the per-row standard error is in the `se` field.
 
 Hold'em has 169 hand classes, Omaha 16,432, five-card Omaha 134,459.
+
+### Omaha Hi/Lo (8-or-better)
+
+In Hi/Lo the equity is the average **share of the split pot**: half the
+pot goes to the best high hand and half to the best qualifying low
+(five distinct ranks, all eight or lower, ace playing low); if nobody
+makes a low, the high hand takes the whole pot. In addition to the
+`equity` column the table has `hiEquity` and `loEquity` (CSV:
+`hi_equity_pct`/`lo_equity_pct`): the hi share includes the whole pot
+from boards where neither player made a low, so hiEquity + loEquity =
+equity. The numerators `hiNumerator`/`loNumerator` are in integer
+quarter-pot units and `denominator` = combos × C(48,5) × C(43,4) × 4,
+so the result can be checked without recomputation.
 
 ### Rank range `rankLow`/`rankHigh` (CSV: `rank_low`/`rank_high`)
 

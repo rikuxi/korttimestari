@@ -68,6 +68,7 @@
                 <tr><td>Omaha</td><td>16,432</td><td>2</td><td>exact</td><td>exact fraction</td></tr>
                 <tr><td>Omaha</td><td>16,432</td><td>3–9</td><td>hybrid</td><td>± 0.0019–0.0046 pp</td></tr>
                 <tr><td>Omaha5</td><td>134,459</td><td>2–9</td><td>hybrid</td><td>± 0.0051–0.0125 pp</td></tr>
+                <tr><td>Omaha Hi/Lo</td><td>16,432</td><td>2</td><td>exact</td><td>exact fraction</td></tr>
             </tbody>
         </table>
 
@@ -176,9 +177,17 @@
             breaks equity down by half: the hi share includes the whole pot
             from rounds where no low was made, so hi + lo = equity. Exact
             enumeration works in Hi/Lo just as in the other game types when
-            every player's cards are known. Precomputed preflop tables for
-            Hi/Lo do not exist yet, so all-in preflop against unknown
-            opponents is computed by simulation.
+            every player's cards are known.
+        </p>
+        <p>
+            The Hi/Lo heads-up preflop table was computed exactly with the
+            same method as the Omaha one: all C(52,5) = 2,598,960 boards and
+            on each board all C(43,4) = 123,410 opponent hands, with the pot
+            split into hi and low halves. Shares are counted in integer
+            quarter-pot units, so the result is an exact fraction, and the
+            table breaks out the hi and low half shares. Multiway Hi/Lo
+            tables do not exist yet — for those player counts, all-in
+            preflop against unknown opponents is computed by simulation.
         </p>
 
         <h2>Data and license</h2>

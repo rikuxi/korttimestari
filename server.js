@@ -240,6 +240,9 @@ app.get('/rankings', lookupLimiter, (req, res) => {
             rankLow: h.rankLow,
             rankHigh: h.rankHigh,
             equity: h.equity,
+            // Hi/Lo-taulukoissa mukana; muissa undefined putoaa pois JSONista
+            hiEquity: h.hiEquity,
+            loEquity: h.loEquity,
             se: h.se,
             combos: h.combos,
             topPct: h.topPct

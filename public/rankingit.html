@@ -3,9 +3,9 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Preflop-käsirankingit — Hold'em, Omaha ja Omaha5 | Korttimestari</title>
-    <meta name="description" content="Selaa ja hae pokerin aloituskäsien rankingeja: eksaktisti ja hybridimenetelmällä lasketut preflop-equityt kaikille käsiluokille (Hold'em 169, Omaha 16 432, Omaha5 134 459) pelaajamäärillä 2–10.">
-    <meta property="og:title" content="Preflop-käsirankingit — Hold'em, Omaha ja Omaha5">
+    <title>Preflop-käsirankingit — Hold'em, Omaha, Omaha5 ja Omaha Hi/Lo | Korttimestari</title>
+    <meta name="description" content="Selaa ja hae pokerin aloituskäsien rankingeja: eksaktisti ja hybridimenetelmällä lasketut preflop-equityt kaikille käsiluokille (Hold'em 169, Omaha 16 432, Omaha5 134 459, Omaha Hi/Lo 16 432) pelaajamäärillä 2–10.">
+    <meta property="og:title" content="Preflop-käsirankingit — Hold'em, Omaha, Omaha5 ja Omaha Hi/Lo">
     <meta property="og:description" content="Hae kädellä tai sen osalla ja katso sija, equity ja virherajat kaikilla pelaajamäärillä. Data ladattavissa CSV:nä (CC BY 4.0).">
     <meta property="og:type" content="website">
     <meta property="og:image" content="/images/korttimestari.png">
@@ -66,6 +66,10 @@
                         <input type="radio" name="gameType" value="omaha5">
                         <span>Omaha5</span>
                     </label>
+                    <label class="radio-label">
+                        <input type="radio" name="gameType" value="omahahilo">
+                        <span>Hi/Lo</span>
+                    </label>
                 </div>
             </div>
 
@@ -98,6 +102,7 @@
                 <button type="button" class="example-chip" data-game="omaha" data-q="(AK)(AK)">(AK)(AK)</button>
                 <button type="button" class="example-chip" data-game="omaha5" data-q="(AJ)(AJ)(T)">(AJ)(AJ)(T)</button>
                 <button type="button" class="example-chip" data-game="omaha5" data-q="AAAA">AAAA</button>
+                <button type="button" class="example-chip" data-game="omahahilo" data-q="A2">A2 (Hi/Lo)</button>
             </p>
         </div>
 
@@ -169,8 +174,10 @@
         </section>
 
         <p class="data-license-note">
-            Heads-up-taulukot (Hold'em, Omaha) ovat eksakteja: kaikki pöydät ja
-            vastustajakädet on käyty läpi. Muut on laskettu hybridimenetelmällä
+            Heads-up-taulukot (Hold'em, Omaha, Omaha Hi/Lo) ovat eksakteja:
+            kaikki pöydät ja vastustajakädet on käyty läpi. Omaha Hi/Lo:n
+            equity on keskimääräinen osuus jaetusta potista (hi- ja
+            low-puoliskot; CSV erittelee ne). Muut on laskettu hybridimenetelmällä
             (eksakti pöytien yli, Monte Carlo vastustajien korttien poiston
             yli) ja rivillä näkyy keskivirhe. Sija-alue suluissa kertoo, millä
             sijoilla käsi voi keskivirheiden puitteissa olla. Data on

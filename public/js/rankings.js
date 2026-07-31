@@ -106,9 +106,12 @@ document.addEventListener('DOMContentLoaded', () => {
         csvLink.href = `/rankings/csv?gameType=${state.gameType}&players=${state.players}`;
     }
 
+    const GAME_NAMES = {
+        holdem: "Hold'em", omaha: 'Omaha', omaha5: 'Omaha5', omahahilo: 'Omaha Hi/Lo'
+    };
+
     function renderMeta(data) {
-        const game = state.gameType === 'holdem' ? "Hold'em"
-            : state.gameType === 'omaha' ? 'Omaha' : 'Omaha5';
+        const game = GAME_NAMES[state.gameType] || state.gameType;
         let text = t('rk.meta', {
             game,
             players: data.players,
@@ -279,9 +282,10 @@ document.addEventListener('DOMContentLoaded', () => {
         const radio = document.querySelector(`input[name="gameType"][value="${game}"]`);
         if (radio && !radio.checked) radio.checked = true;
         const group = document.querySelector('.game-type-group');
-        group.classList.remove('second-checked', 'third-checked');
+        group.classList.remove('second-checked', 'third-checked', 'fourth-checked');
         if (game === 'omaha') group.classList.add('second-checked');
         if (game === 'omaha5') group.classList.add('third-checked');
+        if (game === 'omahahilo') group.classList.add('fourth-checked');
         updatePlayersOptions();
     }
 
@@ -449,7 +453,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     function renderRangeInfo(data) {
         rangeInfoPanel.innerHTML = '';
-        const game = state.gameType === 'omaha' ? 'Omaha' : 'Omaha5';
+        const game = GAME_NAMES[state.gameType] || state.gameType;
         const share = 100 * data.combos / data.totalCombos;
 
         const head = document.createElement('p');

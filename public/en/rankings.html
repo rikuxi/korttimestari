@@ -3,9 +3,9 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Preflop Hand Rankings — Hold'em, Omaha and Omaha5 | Korttimestari</title>
-    <meta name="description" content="Browse and search poker starting hand rankings: preflop equities computed exactly or with a hybrid method for every hand class (Hold'em 169, Omaha 16,432, Omaha5 134,459) with 2–10 players.">
-    <meta property="og:title" content="Preflop Hand Rankings — Hold'em, Omaha and Omaha5">
+    <title>Preflop Hand Rankings — Hold'em, Omaha, Omaha5 and Omaha Hi/Lo | Korttimestari</title>
+    <meta name="description" content="Browse and search poker starting hand rankings: preflop equities computed exactly or with a hybrid method for every hand class (Hold'em 169, Omaha 16,432, Omaha5 134,459, Omaha Hi/Lo 16,432) with 2–10 players.">
+    <meta property="og:title" content="Preflop Hand Rankings — Hold'em, Omaha, Omaha5 and Omaha Hi/Lo">
     <meta property="og:description" content="Search by hand or partial hand and see rank, equity and error bounds for every player count. Full data downloadable as CSV (CC BY 4.0).">
     <meta property="og:type" content="website">
     <meta property="og:image" content="/images/korttimestari.png">
@@ -66,6 +66,10 @@
                         <input type="radio" name="gameType" value="omaha5">
                         <span>Omaha5</span>
                     </label>
+                    <label class="radio-label">
+                        <input type="radio" name="gameType" value="omahahilo">
+                        <span>Hi/Lo</span>
+                    </label>
                 </div>
             </div>
 
@@ -98,6 +102,7 @@
                 <button type="button" class="example-chip" data-game="omaha" data-q="(AK)(AK)">(AK)(AK)</button>
                 <button type="button" class="example-chip" data-game="omaha5" data-q="(AJ)(AJ)(T)">(AJ)(AJ)(T)</button>
                 <button type="button" class="example-chip" data-game="omaha5" data-q="AAAA">AAAA</button>
+                <button type="button" class="example-chip" data-game="omahahilo" data-q="A2">A2 (Hi/Lo)</button>
             </p>
         </div>
 
@@ -170,8 +175,10 @@
         </section>
 
         <p class="data-license-note">
-            The heads-up tables (Hold'em, Omaha) are exact: every board and
-            every opponent hand has been enumerated. The rest were computed
+            The heads-up tables (Hold'em, Omaha, Omaha Hi/Lo) are exact:
+            every board and every opponent hand has been enumerated. Omaha
+            Hi/Lo equity is the average share of the split pot (hi and low
+            halves; the CSV breaks them out). The rest were computed
             with a hybrid method (exact over all boards, Monte Carlo over
             opponent card removal) and each row shows its standard error.
             The rank range in parentheses tells which ranks the hand could

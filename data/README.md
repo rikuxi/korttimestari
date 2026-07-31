@@ -4,10 +4,10 @@
 
 Taulukot kattavat jokaisen käsiluokan jokaisella pelaajamäärällä:
 Hold'em (169 luokkaa, 2–10 pelaajaa), Omaha (16 432 luokkaa,
-2–9 pelaajaa) ja viisikorttinen Omaha (134 459 luokkaa,
-2–9 pelaajaa) — equity-arvoineen, keskivirheineen ja
-sijaepävarmuuksineen. Data on vapaasti käytettävissä
-[CC BY 4.0](LICENSE) -lisenssillä.
+2–9 pelaajaa), viisikorttinen Omaha (134 459 luokkaa, 2–9 pelaajaa)
+ja Omaha Hi/Lo 8-or-better (16 432 luokkaa, heads-up) —
+equity-arvoineen, keskivirheineen ja sijaepävarmuuksineen. Data on
+vapaasti käytettävissä [CC BY 4.0](LICENSE) -lisenssillä.
 
 Tämän hakemiston juuressa on **vain ne taulukot joita sivusto käyttää**.
 Palvelin lataa ne käynnistyksen jälkeen kerran ja tarjoilee `/preflop`-haulla
@@ -45,6 +45,7 @@ ihmiselle. Menetelmä ja tarkkuus ovat tiedoston `meta`-lohkossa.
 | `preflop-omaha5-7max-hybrid` | Omaha5 | 7 | hybridi | ± 0.0067 pp |
 | `preflop-omaha5-8max-hybrid` | Omaha5 | 8 | hybridi | ± 0.0058 pp |
 | `preflop-omaha5-9max-hybrid` | Omaha5 | 9 | hybridi | ± 0.0051 pp |
+| `preflop-omahahilo-2max-exact` | Omaha Hi/Lo | 2 | eksakti | **tarkka murtoluku** |
 
 **Eksakti** = kaikki C(52,5) = 2 598 960 pöytää ja kaikki vastustajakädet
 käydään läpi; tulos on tarkka murtoluku, ja `winCount`/`tieCount`/`denominator`
@@ -53,6 +54,19 @@ vastustajien korttien poiston yli; rivikohtainen keskivirhe on `se`-kentässä.
 
 Hold'emissa on 169 käsiluokkaa, Omahassa 16 432, viisikorttisessa Omahassa
 134 459.
+
+### Omaha Hi/Lo (8-or-better)
+
+Hi/Lo:ssa equity on keskimääräinen **osuus jaetusta potista**: puolet
+potista parhaalle korkealle kädelle ja puolet parhaalle kelvolliselle
+low'lle (viisi eri arvoa, kaikki korkeintaan 8, ässä matalana); jos
+kukaan ei tee low'ta, korkea käsi vie koko potin. Taulukossa on
+`equity`-sarakkeen lisäksi `hiEquity` ja `loEquity` (CSV:
+`hi_equity_pct`/`lo_equity_pct`): hi-osuus sisältää koko potin niiltä
+pöydiltä joilla kumpikaan ei tehnyt low'ta, joten hiEquity + loEquity =
+equity. Osoittajat `hiNumerator`/`loNumerator` ovat neljännespotin
+kokonaislukuyksiköissä ja `denominator` = kombot × C(48,5) × C(43,4) × 4,
+joten tulos on tarkistettavissa ilman uudelleenlaskentaa.
 
 ### Sija-alue `rankLow`/`rankHigh` (CSV: `rank_low`/`rank_high`)
 
