@@ -296,9 +296,10 @@ h1 {
 }
 
 /* Neljä asetusryhmää tasan neljänneksiin samalle riville.
-   Raja on 1024 px, koska pelimuodon valitsin vaatii 220 px: kapeammalla
-   näytöllä neljä sellaista saraketta ei mahtuisi vaan rivi vuotaisi yli. */
-@media (min-width: 1024px) {
+   Raja on 1100 px, koska pelimuodon valitsin vaatii 248 px (neljä
+   vaihtoehtoa): kapeammalla näytöllä neljä sellaista saraketta ei
+   mahtuisi vaan rivi vuotaisi yli. */
+@media (min-width: 1100px) {
     .settings {
         display: grid;
         grid-template-columns: repeat(4, 1fr);
@@ -1047,13 +1048,18 @@ button.tertiary-button:disabled {
     transform: translateX(100%);
 }
 
-/* Game type group - 3 options */
+/* Game type group - 4 options. Neljännekseen mahtuu "Omaha5" vain
+   kapealla sivutäytteellä; leveämpi täyte vuotaisi naapurinapin päälle. */
 .radio-group.game-type-group {
-    min-width: 220px;
+    min-width: 248px;
+}
+
+.radio-group.game-type-group .radio-label {
+    padding: 6px 2px;
 }
 
 .radio-group.game-type-group .background-highlight {
-    width: calc(33.33% - 2px);
+    width: calc(25% - 2px);
 }
 
 .radio-group.game-type-group.second-checked .background-highlight {
@@ -1062,6 +1068,10 @@ button.tertiary-button:disabled {
 
 .radio-group.game-type-group.third-checked .background-highlight {
     transform: translateX(200%);
+}
+
+.radio-group.game-type-group.fourth-checked .background-highlight {
+    transform: translateX(300%);
 }
 
 
@@ -1302,6 +1312,14 @@ button.tertiary-button:disabled {
     gap: 15px;
     margin-top: 10px;
     font-size: 12px;
+}
+
+/* Hi/Lo: heron low-tilastorivi käsijakauman alla */
+.hero-low-line {
+    margin-top: 8px;
+    text-align: center;
+    font-size: 12px;
+    color: var(--text-muted, #888);
 }
 
 .legend-item {

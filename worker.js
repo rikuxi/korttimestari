@@ -11,7 +11,7 @@ try {
     if (typeof simulationCount !== 'number' || simulationCount < 100 || simulationCount > 50000) {
         throw new Error('Invalid simulation count');
     }
-    if (gameType !== 'holdem' && gameType !== 'omaha' && gameType !== 'omaha5') {
+    if (gameType !== 'holdem' && gameType !== 'omaha' && gameType !== 'omaha5' && gameType !== 'omahahilo') {
         throw new Error('Invalid game type');
     }
 

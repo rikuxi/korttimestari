@@ -17,6 +17,12 @@ const DATA_DIR = path.join(__dirname, 'data');
 // tiedosto ohitetaan, joten uusi taulukko otetaan käyttöön pelkällä ajolla -
 // koodiin ei tarvitse koskea. Katso data/README.md.
 function candidatesFor(gameType, players) {
+    if (gameType === 'omahahilo') {
+        return [
+            { file: `preflop-omahahilo-${players}max-exact.json`, exact: true },
+            { file: `preflop-omahahilo-${players}max-hybrid.json`, exact: false }
+        ];
+    }
     if (gameType === 'omaha5') {
         return [
             { file: `preflop-omaha5-${players}max-exact.json`, exact: true },
@@ -39,8 +45,8 @@ function candidatesFor(gameType, players) {
     return [];
 }
 
-const SUPPORTED_GAMES = ['holdem', 'omaha', 'omaha5'];
-const MAX_PLAYERS = { holdem: 10, omaha: 9, omaha5: 9 };
+const SUPPORTED_GAMES = ['holdem', 'omaha', 'omaha5', 'omahahilo'];
+const MAX_PLAYERS = { holdem: 10, omaha: 9, omaha5: 9, omahahilo: 9 };
 
 const cache = new Map();
 
@@ -56,15 +62,16 @@ const cache = new Map();
 // ollut) on ensimmäisenä.
 //
 // PREFLOP_CACHE_TABLES = montako Omaha5-kokoista taulukkoa budjettiin
-// mahtuu. Oletus 10 riittää kaikille 25 taulukolle yhtä aikaa (yhteensä
-// ~1,21 M riviä < 10 x 134 459), eli oletuksilla mikään ei häädy koskaan.
-// Muistiahtaassa ympäristössä rajaa voi pudottaa - alle 8:lla Omaha5:n
-// /rankings/hand (8 taulukkoa silmukassa) alkaa taas lukea levyltä,
-// kauppa on tietoinen. Minimi 2 takaa, ettei juuri ladattu taulukko
-// koskaan häädä itseään.
+// mahtuu. Oletus 11 riittää kaikille 33 taulukolle yhtä aikaa (Hold'em +
+// Omaha + Omaha5 + Omaha Hi/Lo, yhteensä ~1,34 M riviä < 11 x 134 459),
+// eli oletuksilla mikään ei häädy koskaan. Vanha oletus 10 olisi riittänyt
+// vain 4 485 rivin marginaalilla. Muistiahtaassa ympäristössä rajaa voi
+// pudottaa - alle 8:lla Omaha5:n /rankings/hand (8 taulukkoa silmukassa)
+// alkaa taas lukea levyltä, kauppa on tietoinen. Minimi 2 takaa, ettei
+// juuri ladattu taulukko koskaan häädä itseään.
 const OMAHA5_TABLE_ROWS = 134459;
 const MAX_CACHED_ROWS =
-    Math.max(2, parseInt(process.env.PREFLOP_CACHE_TABLES, 10) || 10) * OMAHA5_TABLE_ROWS;
+    Math.max(2, parseInt(process.env.PREFLOP_CACHE_TABLES, 10) || 11) * OMAHA5_TABLE_ROWS;
 
 function evictIfNeeded() {
     let rows = 0;

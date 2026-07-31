@@ -50,6 +50,27 @@ test('validi holdem-simulaatio palauttaa 200 ja oikean muotoisen tuloksen', asyn
     assert.ok(data.results.heroHandStats);
 });
 
+test('validi omahahilo-simulaatio palauttaa 200 ja hi/lo-erittelyn', async () => {
+    const res = await post(validBody({
+        gameType: 'omahahilo',
+        playerHandsData: [
+            { hand: ['As', '2s', '3h', '4h'], isFolded: false },
+            { hand: ['Ks', 'Kh', 'Qs', 'Jh'], isFolded: false }
+        ]
+    }));
+    assert.strictEqual(res.status, 200);
+    const data = await res.json();
+    assert.strictEqual(data.results.equityPercentages.length, 2);
+    assert.ok(Array.isArray(data.results.hiEquityPercentages));
+    assert.ok(Array.isArray(data.results.loEquityPercentages));
+    assert.ok(data.results.hiLoStats);
+    // Erittely summautuu kokonaisequityyn
+    for (let i = 0; i < 2; i++) {
+        const sum = data.results.hiEquityPercentages[i] + data.results.loEquityPercentages[i];
+        assert.ok(Math.abs(sum - data.results.equityPercentages[i]) < 1e-9);
+    }
+});
+
 test('tuplakortti hylätään (400)', async () => {
     const res = await post(validBody({
         playerHandsData: [

@@ -71,7 +71,13 @@ document.addEventListener('DOMContentLoaded', () => {
     function getCardsPerPlayer() {
         if (currentGameType === 'holdem') return 2;
         if (currentGameType === 'omaha5') return 5;
-        return 4; // omaha
+        return 4; // omaha ja omahahilo
+    }
+
+    // Omaha Hi/Lo: potti jaetaan hi- ja low-puoliskoihin, joten tulokset
+    // esitetään eri riveillä (scoop/osapotti + hi/lo-erittely)
+    function isHiLoGame() {
+        return currentGameType === 'omahahilo';
     }
 
     /**
@@ -505,7 +511,7 @@ document.addEventListener('DOMContentLoaded', () => {
         
         const pokerTableContainer = document.createElement('div');
         pokerTableContainer.classList.add('poker-table-container');
-        if (currentGameType === 'omaha' || currentGameType === 'omaha5') {
+        if (currentGameType !== 'holdem') {
             pokerTableContainer.classList.add('omaha-mode');
         }
         if (currentGameType === 'omaha5') {
@@ -620,10 +626,12 @@ document.addEventListener('DOMContentLoaded', () => {
             <div class="hero-stats-title">${t('sim.heroDistribution')}</div>
             <div id="heroStatsTrack" class="hero-bar-track"></div>
             <div id="heroStatsLegend" class="hero-stats-legend"></div>
+            ${isHiLoGame() ? '<div id="heroLowLine" class="hero-low-line"></div>' : ''}
         `;
         playersContainer.appendChild(heroStatsContainer);
         // Täytä placeholder heti, jotta palkki ja selite varaavat tilansa alusta asti
         displayHeroStats(null);
+        displayHeroLowLine(null, 0);
         
         const cardsPerPlayer = getCardsPerPlayer();
         
@@ -632,7 +640,8 @@ document.addEventListener('DOMContentLoaded', () => {
         // pelaajia, sitä pienempi kulmaero ja sitä enemmän sädettä tarvitaan.
         // Otsikko + kortit + 5 tilastoriviä + palkki. Korttien osuus luetaan
         // tokenista, jotta korkeampi kortti kasvattaa myös pystysäteen.
-        const NON_CARD_BOX_HEIGHT = 136;
+        // Hi/Lo:ssa rivejä on kuusi (hi/lo-erittely), joten ruutu on korkeampi.
+        const NON_CARD_BOX_HEIGHT = 136 + (isHiLoGame() ? 18 : 0);
         const PLAYER_BOX_HEIGHT = NON_CARD_BOX_HEIGHT + cardMetrics(cardsPerPlayer).h;
         // Sekoitus- ja fold-napit istuvat ruudun oikean reunan ulkopuolella:
         // CSS asettaa ne right: -24px, ja .player-input:n 8 px padding syö
@@ -709,7 +718,7 @@ document.addEventListener('DOMContentLoaded', () => {
             
             const cardInputsDiv = document.createElement('div');
             cardInputsDiv.classList.add('card-inputs');
-            if (currentGameType === 'omaha') cardInputsDiv.classList.add('omaha');
+            if (cardsPerPlayer === 4) cardInputsDiv.classList.add('omaha');
             if (currentGameType === 'omaha5') cardInputsDiv.classList.add('omaha5');
             
             const cardDropZones = [];
@@ -732,10 +741,14 @@ document.addEventListener('DOMContentLoaded', () => {
             const playerStats = document.createElement('div');
             playerStats.classList.add('player-stats');
             playerStats.id = `player${i}Stats`;
+            // Hi/Lo:ssa "voitto" tarkoittaa koko potin scooppaamista ja
+            // "tasapeli" mitä tahansa osapottia; lisäksi näytetään potin
+            // puoliskojen erittely omalla rivillään
             playerStats.innerHTML = `
-                <div class="stat-row"><span class="label">${t('sim.stat.win')}</span> <span class="value win-value">-</span></div>
-                <div class="stat-row"><span class="label">${t('sim.stat.tie')}</span> <span class="value tie-value">-</span></div>
+                <div class="stat-row"><span class="label">${t(isHiLoGame() ? 'sim.stat.scoop' : 'sim.stat.win')}</span> <span class="value win-value">-</span></div>
+                <div class="stat-row"><span class="label">${t(isHiLoGame() ? 'sim.stat.split' : 'sim.stat.tie')}</span> <span class="value tie-value">-</span></div>
                 <div class="stat-row"><span class="label">${t('sim.stat.equity')}</span> <span class="value equity-value">-</span></div>
+                ${isHiLoGame() ? `<div class="stat-row aux-row"><span class="label">${t('sim.stat.hilo')}</span> <span class="value hilo-value">-</span></div>` : ''}
                 <div class="stat-row aux-row"><span class="label">${t('sim.stat.se')}</span> <span class="value se-value">-</span></div>
                 <div class="stat-row aux-row"><span class="label">${t('sim.stat.exact')}</span> <span class="value exact-value">-</span></div>
                 <div class="mini-progress-container"><div class="mini-progress-bar"></div></div>
@@ -928,7 +941,7 @@ document.addEventListener('DOMContentLoaded', () => {
         // Omaha5 on ~80x Hold'emia raskaampi per kierros, joten sama
         // kierrosmäärä voi olla 0.7 s tai lähes minuutin - isosta ajosta
         // kerrotaan etukäteen eikä anneta sen yllättää.
-        const SIM_COST_PER_PLAYER = { holdem: 1.0e-7, omaha: 4.8e-6, omaha5: 8.0e-6 };
+        const SIM_COST_PER_PLAYER = { holdem: 1.0e-7, omaha: 4.8e-6, omaha5: 8.0e-6, omahahilo: 6.5e-6 };
         const estSeconds = simulationCount * activePlayers.length *
             SIM_COST_PER_PLAYER[currentGameType];
         if (estSeconds > 4) {
@@ -1070,7 +1083,7 @@ document.addEventListener('DOMContentLoaded', () => {
      */
     async function fetchPreflopExact(playerHandsData, communityCards) {
         if (!isRandomOpponentsMode()) return;
-        if (!['holdem', 'omaha', 'omaha5'].includes(currentGameType)) return;
+        if (!['holdem', 'omaha', 'omaha5', 'omahahilo'].includes(currentGameType)) return;
 
         const hasBoard = (communityCards.flop && communityCards.flop.length > 0) ||
             communityCards.turn || communityCards.river;
@@ -1171,11 +1184,13 @@ document.addEventListener('DOMContentLoaded', () => {
         playerHandsData.forEach((playerData, index) => {
             const playerStats = document.getElementById(`player${index}Stats`);
             if (playerStats) {
+                const hiloEl = playerStats.querySelector('.hilo-value');
                 if (playerData.isFolded) {
                     playerStats.querySelector('.win-value').textContent = t('sim.folded');
                     playerStats.querySelector('.tie-value').textContent = '-';
                     playerStats.querySelector('.equity-value').textContent = '-';
                     playerStats.querySelector('.se-value').textContent = '-';
+                    if (hiloEl) hiloEl.textContent = '-';
                     playerStats.querySelector('.mini-progress-bar').style.width = '0%';
                 } else if (isRandomOpponents && index > 0) {
                     // Tuntemattomien vastustajien todennäköisyyksiä ei näytetä:
@@ -1184,6 +1199,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     playerStats.querySelector('.tie-value').textContent = '-';
                     playerStats.querySelector('.equity-value').textContent = '-';
                     playerStats.querySelector('.se-value').textContent = '-';
+                    if (hiloEl) hiloEl.textContent = '-';
                     playerStats.querySelector('.mini-progress-bar').style.width = '0%';
                 } else {
                     const winPercent = winPercentages[index].toFixed(2);
@@ -1197,6 +1213,14 @@ document.addEventListener('DOMContentLoaded', () => {
                     playerStats.querySelector('.se-value').textContent =
                         se > 0 ? `± ${se.toFixed(2)}` : '-';
 
+                    // Hi/Lo-erittely: potin puoliskojen osuudet. Hi sisältää
+                    // koko potin kierroksilta joilla low'ta ei ollut, joten
+                    // hi + lo = equity.
+                    if (hiloEl && Array.isArray(results.hiEquityPercentages)) {
+                        hiloEl.textContent =
+                            `${results.hiEquityPercentages[index].toFixed(1)} / ${results.loEquityPercentages[index].toFixed(1)}`;
+                    }
+
                     const progressBar = playerStats.querySelector('.mini-progress-bar');
                     if (progressBar) progressBar.style.width = `${totalEquity}%`;
                 }
@@ -1205,6 +1229,25 @@ document.addEventListener('DOMContentLoaded', () => {
         });
 
         displayHeroStats(heroHandStats || null);
+        displayHeroLowLine(results.hiLoStats || null, simulationCount);
+    }
+
+    // Heron low-rivi käsijakauman alla: kuinka usein low syntyi, kuinka
+    // usein se voitti (tai jakoi) low-puoliskon ja kuinka usein pöytä jäi
+    // kokonaan ilman low'ta. Näytetään vain Hi/Lo-pelissä.
+    function displayHeroLowLine(hiLoStats, simulationCount) {
+        const el = document.getElementById('heroLowLine');
+        if (!el) return;
+        if (!hiLoStats || !simulationCount) {
+            el.textContent = t('sim.lowLineEmpty');
+            return;
+        }
+        const pct = x => ((100 * x) / simulationCount).toFixed(1);
+        el.textContent = t('sim.lowLine', {
+            made: pct(hiLoStats.heroLowMade),
+            won: pct(hiLoStats.heroLowWon),
+            nolow: pct(hiLoStats.noLowRounds)
+        });
     }
 
     // Näytä heron käsijakauma. Ilman tuloksia (null/tyhjä) näytetään
@@ -1264,10 +1307,13 @@ document.addEventListener('DOMContentLoaded', () => {
             element.querySelector('.equity-value').textContent = '-';
             element.querySelector('.se-value').textContent = '-';
             element.querySelector('.exact-value').textContent = '-';
+            const hiloEl = element.querySelector('.hilo-value');
+            if (hiloEl) hiloEl.textContent = '-';
             element.querySelector('.mini-progress-bar').style.width = '0%';
         });
         // Palauta käsijakauma placeholder-tilaan (harmaa palkki, viivat)
         displayHeroStats(null);
+        displayHeroLowLine(null, 0);
     }
     
     function getRandomUnusedCard() {
@@ -1470,17 +1516,19 @@ document.addEventListener('DOMContentLoaded', () => {
         await runSimulation();
     });
     
-    gameTypeRadios.forEach(radio => { 
-        radio.addEventListener('change', (e) => { 
-            handleGameTypeChange(); 
+    gameTypeRadios.forEach(radio => {
+        radio.addEventListener('change', (e) => {
+            handleGameTypeChange();
             const radioGroup = e.target.closest('.radio-group');
-            radioGroup.classList.remove('second-checked', 'third-checked');
+            radioGroup.classList.remove('second-checked', 'third-checked', 'fourth-checked');
             if (e.target.value === 'omaha') {
                 radioGroup.classList.add('second-checked');
             } else if (e.target.value === 'omaha5') {
                 radioGroup.classList.add('third-checked');
+            } else if (e.target.value === 'omahahilo') {
+                radioGroup.classList.add('fourth-checked');
             }
-        }); 
+        });
     });
     
     deckColorRadios.forEach(radio => { 
@@ -1504,7 +1552,10 @@ document.addEventListener('DOMContentLoaded', () => {
         const radioGroups = document.querySelectorAll('.radio-group');
         const omahaRadio = document.querySelector('input[name="gameType"][value="omaha"]');
         const omaha5Radio = document.querySelector('input[name="gameType"][value="omaha5"]');
-        if (omaha5Radio && omaha5Radio.checked) {
+        const omahaHiLoRadio = document.querySelector('input[name="gameType"][value="omahahilo"]');
+        if (omahaHiLoRadio && omahaHiLoRadio.checked) {
+            radioGroups[0].classList.add('fourth-checked');
+        } else if (omaha5Radio && omaha5Radio.checked) {
             radioGroups[0].classList.add('third-checked');
         } else if (omahaRadio && omahaRadio.checked) {
             radioGroups[0].classList.add('second-checked');

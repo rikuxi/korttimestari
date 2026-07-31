@@ -27,7 +27,7 @@ const { cardToInt } = require('./public/js/engine');
 const RANK_CHARS = '23456789TJQKA';
 const SUIT_CHARS = 'shdc';
 
-const CPP = { holdem: 2, omaha: 4, omaha5: 5 };
+const CPP = { holdem: 2, omaha: 4, omaha5: 5, omahahilo: 4 };
 
 /**
  * Kyselyvirhe koneluettavalla koodilla: UI kääntää koodin käyttäjän

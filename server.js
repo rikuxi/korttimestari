@@ -28,6 +28,10 @@ try {
 
 const PORT = process.env.PORT || 3002;
 
+// Tuetut pelimuodot - sama lista kaikille reiteille. Rankings-reitit
+// vastaavat 404 jos pelimuodolle ei ole vielä esilaskettua taulukkoa.
+const VALID_GAME_TYPES = ['holdem', 'omaha', 'omaha5', 'omahahilo'];
+
 // Käytä helmet konfiguroituna (yhdistetty CSP ja muut headerit)
 // HUOM: helmet ennen express.static, jotta turvaotsakkeet tulevat myös staattisille tiedostoille
 app.use(helmet({
@@ -146,7 +150,7 @@ let activeWorkers = 0;
  */
 app.get('/preflop', lookupLimiter, (req, res) => {
     const gameType = req.query.gameType;
-    if (gameType !== 'holdem' && gameType !== 'omaha' && gameType !== 'omaha5') {
+    if (!VALID_GAME_TYPES.includes(gameType)) {
         return res.status(400).json({ error: 'Invalid game type', code: 'invalid_game_type' });
     }
 
@@ -192,7 +196,7 @@ const csvLimiter = rateLimit({
  */
 app.get('/rankings', lookupLimiter, (req, res) => {
     const gameType = req.query.gameType;
-    if (gameType !== 'holdem' && gameType !== 'omaha' && gameType !== 'omaha5') {
+    if (!VALID_GAME_TYPES.includes(gameType)) {
         return res.status(400).json({ error: 'Invalid game type', code: 'invalid_game_type' });
     }
     const players = parseInt(req.query.players, 10);
@@ -252,7 +256,7 @@ app.get('/rankings', lookupLimiter, (req, res) => {
  */
 app.get('/rankings/range', lookupLimiter, (req, res) => {
     const gameType = req.query.gameType;
-    if (gameType !== 'holdem' && gameType !== 'omaha' && gameType !== 'omaha5') {
+    if (!VALID_GAME_TYPES.includes(gameType)) {
         return res.status(400).json({ error: 'Invalid game type', code: 'invalid_game_type' });
     }
     const players = parseInt(req.query.players, 10);
@@ -306,7 +310,8 @@ app.get('/rankings/range', lookupLimiter, (req, res) => {
 const KEY_PATTERN = {
     holdem: /^[2-9TJQKA]{2}[so]?$/,
     omaha: /^([2-9TJQKA][shdc]){4}$/,
-    omaha5: /^([2-9TJQKA][shdc]){5}$/
+    omaha5: /^([2-9TJQKA][shdc]){5}$/,
+    omahahilo: /^([2-9TJQKA][shdc]){4}$/
 };
 
 /**
@@ -317,7 +322,7 @@ const KEY_PATTERN = {
  */
 app.get('/rankings/hand', lookupLimiter, (req, res) => {
     const gameType = req.query.gameType;
-    if (gameType !== 'holdem' && gameType !== 'omaha' && gameType !== 'omaha5') {
+    if (!VALID_GAME_TYPES.includes(gameType)) {
         return res.status(400).json({ error: 'Invalid game type', code: 'invalid_game_type' });
     }
     const key = req.query.key;
@@ -355,7 +360,7 @@ app.get('/rankings/hand', lookupLimiter, (req, res) => {
 /** Koko taulukko CSV:nä (CC BY 4.0, katso data/LICENSE) */
 app.get('/rankings/csv', csvLimiter, (req, res) => {
     const gameType = req.query.gameType;
-    if (gameType !== 'holdem' && gameType !== 'omaha' && gameType !== 'omaha5') {
+    if (!VALID_GAME_TYPES.includes(gameType)) {
         return res.status(400).json({ error: 'Invalid game type', code: 'invalid_game_type' });
     }
     const players = parseInt(req.query.players, 10);
@@ -391,7 +396,7 @@ app.post('/simulate', apiLimiter, (req, res) => {
     
     // Validoi gameType
     const gameType = req.body.gameType;
-    if (gameType !== 'holdem' && gameType !== 'omaha' && gameType !== 'omaha5') {
+    if (!VALID_GAME_TYPES.includes(gameType)) {
         return res.status(400).json({ error: 'Invalid game type', code: 'invalid_game_type' });
     }
 

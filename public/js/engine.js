@@ -272,12 +272,96 @@
         return evalOmahaFast(hole, holePairs, expandBoardTriples(board, scratchTriples));
     }
 
+    // --- Omaha Hi/Lo: low-käden arviointi ----------------------------------
+    //
+    // 8-or-better: viisi eri arvoa, kaikki korkeintaan 8, ässä matalana.
+    // Suorat ja värit eivät haittaa, joten maat ja kerrannaisuudet eivät
+    // merkitse - low-käsi on pelkkä arvojoukko. Se koodataan 8-bittisenä
+    // maskina (A = bitti 0, 2 = bitti 1, ..., 8 = bitti 7), jolloin
+    // PIENEMPI maski kokonaislukuna on PAREMPI low: vertailu ratkeaa
+    // korkeimman erottavan bitin eli korkeimman erottavan kortin kohdalla,
+    // täsmälleen kuten säännöissä. Esim. 86432 (bitit 7,5,3,2,1 = 174)
+    // voittaa 86532:n (bitit 7,5,4,2,1 = 182).
+
+    // Sentinel "ei low'ta": suurempi kuin mikään kelvollinen maski (max 248)
+    const NO_LOW = 0x100;
+
+    // Kortin low-bitti, tai 0 jos kortti ei kelpaa low'hun (9..K)
+    const LOW_BIT = (() => {
+        const t = new Int32Array(52);
+        for (let c = 0; c < 52; c++) {
+            const r = c >> 2;                       // 0 = kakkonen .. 12 = ässä
+            if (r === 12) t[c] = 1;                 // ässä on matalin
+            else if (r <= 6) t[c] = 1 << (r + 1);   // 2..8
+        }
+        return t;
+    })();
+
+    // Bittien määrä 8-bittisessä maskissa
+    const POP8 = (() => {
+        const t = new Int32Array(256);
+        for (let i = 1; i < 256; i++) t[i] = t[i >> 1] + (i & 1);
+        return t;
+    })();
+
+    /**
+     * Purkaa pöydän 10 kolmikon low-maskit. out[i] = kolmen eri low-arvon
+     * maski, tai 0 jos kolmikko ei kelpaa low'n pohjaksi (sisältää kortin
+     * 9..K tai toistuvan arvon - kummassakin bittejä jää alle kolmen).
+     * @returns {boolean} - voiko tällä pöydällä ylipäänsä olla low
+     */
+    function expandBoardLowTriples(board, out) {
+        let any = false;
+        for (let i = 0, b = 0; b < 30; i++, b += 3) {
+            const m = LOW_BIT[board[BOARD_TRIPLES[b]]]
+                | LOW_BIT[board[BOARD_TRIPLES[b + 1]]]
+                | LOW_BIT[board[BOARD_TRIPLES[b + 2]]];
+            if (POP8[m] === 3) { out[i] = m; any = true; }
+            else out[i] = 0;
+        }
+        return any;
+    }
+
+    /** Paras low puretuista pöytäkolmikoista (sisäinen nopea polku) */
+    function evalOmahaLowFast(hole, holePairs, lowTriples) {
+        let best = NO_LOW;
+        for (let p = 0; p < holePairs.length; p += 2) {
+            const pm = LOW_BIT[hole[holePairs[p]]] | LOW_BIT[hole[holePairs[p + 1]]];
+            if (POP8[pm] !== 2) continue;
+            for (let i = 0; i < 10; i++) {
+                const tm = lowTriples[i];
+                // Erillisyys: parin ja kolmikon bitit eivät saa leikata,
+                // muuten arvoja olisi alle viisi
+                if (tm !== 0 && (pm & tm) === 0) {
+                    const m = pm | tm;
+                    if (m < best) best = m;
+                }
+            }
+        }
+        return best;
+    }
+
+    const scratchLowTriples = new Int32Array(10);
+
+    /**
+     * Paras low-käsi: tasan 2 korttia kädestä ja 3 pöydästä, kaikki viisi
+     * eri arvoja ja korkeintaan 8 (ässä matalana).
+     * @param {Int32Array|number[]} hole - pelaajan kortit
+     * @param {Int32Array} holePairs - HOLE_PAIRS[hole.length]
+     * @param {Int32Array|number[]} board - viisi pöytäkorttia
+     * @returns {number} - low-maski, tai NO_LOW jos kelvollista low'ta ei ole
+     */
+    function evalOmahaLow(hole, holePairs, board) {
+        if (!expandBoardLowTriples(board, scratchLowTriples)) return NO_LOW;
+        return evalOmahaLowFast(hole, holePairs, scratchLowTriples);
+    }
+
     // --- Simulaatio --------------------------------------------------------
 
     function cardsPerPlayerFor(gameType) {
         if (gameType === 'holdem') return 2;
         if (gameType === 'omaha5') return 5;
-        return 4;
+        return 4;   // omaha ja omahahilo
     }
 
     /**
@@ -302,6 +386,7 @@
         const playerCount = playerHandsData.length;
         const cardsPerPlayer = cardsPerPlayerFor(gameType);
         const isOmaha = gameType !== 'holdem';
+        const isHiLo = gameType === 'omahahilo';
         const holePairs = HOLE_PAIRS[cardsPerPlayer];
 
         // Pelaajan tila: 0 = ei mukana, 1 = kiinteä käsi, 2 = arvotaan
@@ -359,7 +444,7 @@
         for (let i = 0; i < playerCount; i++) if (state[i] !== 0) active.push(i);
 
         return {
-            playerCount, cardsPerPlayer, isOmaha, holePairs,
+            playerCount, cardsPerPlayer, isOmaha, isHiLo, holePairs,
             state, fixedHands, knownBoard, deck, deckLen,
             boardNeeded, randomPlayers, need, active
         };
@@ -379,7 +464,7 @@
     function runSimulation(data, onProgress) {
         const simulationCount = data.simulationCount;
         const {
-            playerCount, cardsPerPlayer, isOmaha, holePairs,
+            playerCount, cardsPerPlayer, isOmaha, isHiLo, holePairs,
             state, fixedHands, knownBoard, deck, deckLen,
             boardNeeded, randomPlayers, need, active
         } = prepare(data);
@@ -391,6 +476,12 @@
         // Neliösumma keskivirhettä varten: kierrokset ovat riippumattomia,
         // joten osuuksien otosvarianssi antaa suoraan estimaatin tarkkuudesta
         const equitySq = new Array(playerCount).fill(0);
+        // Hi/Lo: potin puolikkaat erikseen, jotta erittely voidaan näyttää.
+        // hiSums sisältää koko potin silloin kun low'ta ei ole - näin
+        // hiSums + loSums = equitySums pätee aina.
+        const hiSums = isHiLo ? new Array(playerCount).fill(0) : null;
+        const loSums = isHiLo ? new Array(playerCount).fill(0) : null;
+        const hiLoCounts = isHiLo ? { heroLowMade: 0, heroLowWon: 0, noLowRounds: 0 } : null;
 
         if (active.length === 0) {
             throw new Error('No active players with cards');
@@ -403,7 +494,12 @@
             winCounts[active[0]] = simulationCount;
             equitySums[active[0]] = simulationCount;
             equitySq[active[0]] = simulationCount;
-            return finish(winCounts, tieCounts, equitySums, equitySq, simulationCount, heroHandStats);
+            if (isHiLo) {
+                hiSums[active[0]] = simulationCount;
+                hiLoCounts.noLowRounds = simulationCount;
+            }
+            return finish(winCounts, tieCounts, equitySums, equitySq, simulationCount, heroHandStats,
+                hiSums, loSums, hiLoCounts);
         }
 
         // Uudelleenkäytettävät puskurit
@@ -411,7 +507,9 @@
         for (let i = 0; i < knownBoard.length; i++) board[i] = knownBoard[i];
         const dealt = new Int32Array(cardsPerPlayer);
         const values = new Array(playerCount).fill(0);
+        const loValues = new Array(playerCount).fill(NO_LOW);
         const boardTriples = new Int32Array(30);
+        const lowTriples = new Int32Array(10);
 
         const progressStep = Math.max(1, Math.floor(simulationCount / 100));
         const boardStart = randomPlayers * cardsPerPlayer;
@@ -425,9 +523,14 @@
             }
 
             for (let b = 0; b < boardNeeded; b++) board[knownBoardLen + b] = deck[boardStart + b];
-            if (isOmaha) expandBoardTriples(board, boardTriples);
+            let lowPossible = false;
+            if (isOmaha) {
+                expandBoardTriples(board, boardTriples);
+                if (isHiLo) lowPossible = expandBoardLowTriples(board, lowTriples);
+            }
 
             let maxValue = -1, winnerCount = 0;
+            let loMin = NO_LOW, loWinnerCount = 0;
             let di = 0;
             for (let a = 0; a < active.length; a++) {
                 const idx = active[a];
@@ -442,6 +545,12 @@
                         hole = fixedHands[idx];
                     }
                     value = evalOmahaFast(hole, holePairs, boardTriples);
+                    if (isHiLo) {
+                        const lo = lowPossible ? evalOmahaLowFast(hole, holePairs, lowTriples) : NO_LOW;
+                        loValues[idx] = lo;
+                        if (lo < loMin) { loMin = lo; loWinnerCount = 1; }
+                        else if (lo === loMin && loMin !== NO_LOW) loWinnerCount++;
+                    }
                 } else {
                     let h0, h1;
                     if (state[idx] === 2) { h0 = deck[di]; h1 = deck[di + 1]; di += 2; }
@@ -458,14 +567,43 @@
                 heroHandStats[name] = (heroHandStats[name] || 0) + 1;
             }
 
-            const share = 1 / winnerCount;
-            for (let a = 0; a < active.length; a++) {
-                const idx = active[a];
-                if (values[idx] === maxValue) {
-                    if (winnerCount === 1) winCounts[idx]++;
-                    else tieCounts[idx]++;
+            if (isHiLo) {
+                // Jaettu potti: puolet parhaalle hi-kädelle, puolet parhaalle
+                // low'lle. Jos kukaan ei tee low'ta, hi vie koko potin.
+                if (loWinnerCount === 0) hiLoCounts.noLowRounds++;
+                if (state[0] !== 0) {
+                    if (loValues[0] !== NO_LOW) hiLoCounts.heroLowMade++;
+                    if (loWinnerCount > 0 && loValues[0] === loMin) hiLoCounts.heroLowWon++;
+                }
+                for (let a = 0; a < active.length; a++) {
+                    const idx = active[a];
+                    const hiShare = values[idx] === maxValue ? 1 / winnerCount : 0;
+                    let hiPart, loPart;
+                    if (loWinnerCount === 0) {
+                        hiPart = hiShare;
+                        loPart = 0;
+                    } else {
+                        hiPart = 0.5 * hiShare;
+                        loPart = loValues[idx] === loMin ? 0.5 / loWinnerCount : 0;
+                    }
+                    const share = hiPart + loPart;
+                    if (share === 1) winCounts[idx]++;
+                    else if (share > 0) tieCounts[idx]++;
+                    hiSums[idx] += hiPart;
+                    loSums[idx] += loPart;
                     equitySums[idx] += share;
                     equitySq[idx] += share * share;
+                }
+            } else {
+                const share = 1 / winnerCount;
+                for (let a = 0; a < active.length; a++) {
+                    const idx = active[a];
+                    if (values[idx] === maxValue) {
+                        if (winnerCount === 1) winCounts[idx]++;
+                        else tieCounts[idx]++;
+                        equitySums[idx] += share;
+                        equitySq[idx] += share * share;
+                    }
                 }
             }
 
@@ -474,12 +612,14 @@
             }
         }
 
-        return finish(winCounts, tieCounts, equitySums, equitySq, simulationCount, heroHandStats);
+        return finish(winCounts, tieCounts, equitySums, equitySq, simulationCount, heroHandStats,
+            hiSums, loSums, hiLoCounts);
     }
 
-    function finish(winCounts, tieCounts, equitySums, equitySq, simulationCount, heroHandStats) {
+    function finish(winCounts, tieCounts, equitySums, equitySq, simulationCount, heroHandStats,
+        hiSums, loSums, hiLoCounts) {
         const n = simulationCount;
-        return {
+        const result = {
             winCounts,
             tieCounts,
             winPercentages: winCounts.map(w => (w / n) * 100),
@@ -496,6 +636,19 @@
             simulationCount,
             heroHandStats
         };
+        if (hiSums) {
+            // Hi/Lo-erittely: hiEquity sisältää koko potin kun low'ta ei
+            // ollut, joten hi + lo = equity. winCounts = scooppasi koko potin,
+            // tieCounts = sai osan potista.
+            result.hiEquityPercentages = hiSums.map(e => (e / n) * 100);
+            result.loEquityPercentages = loSums.map(e => (e / n) * 100);
+            result.hiLoStats = {
+                heroLowMade: hiLoCounts.heroLowMade,
+                heroLowWon: hiLoCounts.heroLowWon,
+                noLowRounds: hiLoCounts.noLowRounds
+            };
+        }
+        return result;
     }
 
     // --- Eksakti enumerointi -----------------------------------------------
@@ -516,6 +669,9 @@
     const COST_HOLDEM = 3.5e-8;   // yksi eval7
     const COST_OMAHA = 2.2e-6;    // 60 x eval5 (4 korttia: 6 paria x 10 kolmikkoa)
     const COST_OMAHA5 = 3.7e-6;   // 100 x eval5 (5 korttia: 10 paria x 10 kolmikkoa)
+    // Hi + low: low-arviointi on maskioperaatioita eli paljon eval5:ttä
+    // halvempi, ja 40 % pöydistä ohittaa sen kokonaan
+    const COST_OMAHA_HILO = 3.0e-6;
 
     /**
      * Kertoo voiko tilanteen laskea tarkasti ja mitä se maksaisi.
@@ -537,7 +693,8 @@
         }
         const boards = binomial(p.deckLen, p.boardNeeded);
         const perBoard = p.active.length * (!p.isOmaha ? COST_HOLDEM
-            : (p.cardsPerPlayer === 5 ? COST_OMAHA5 : COST_OMAHA));
+            : p.isHiLo ? COST_OMAHA_HILO
+                : (p.cardsPerPlayer === 5 ? COST_OMAHA5 : COST_OMAHA));
         return {
             feasible: p.active.length >= 2,
             reason: p.active.length < 2 ? 'single-player' : null,
@@ -554,7 +711,7 @@
      */
     function enumerateExact(data, onProgress) {
         const {
-            playerCount, isOmaha, holePairs,
+            playerCount, isOmaha, isHiLo, holePairs,
             state, fixedHands, knownBoard, deck, deckLen,
             boardNeeded, randomPlayers, active
         } = prepare(data);
@@ -564,20 +721,30 @@
         const winCounts = new Array(playerCount).fill(0);
         const tieCounts = new Array(playerCount).fill(0);
         const equityNumerators = new Array(playerCount).fill(0);
+        const hiNumerators = isHiLo ? new Array(playerCount).fill(0) : null;
+        const loNumerators = isHiLo ? new Array(playerCount).fill(0) : null;
+        const hiLoCounts = isHiLo ? { heroLowMade: 0, heroLowWon: 0, noLowRounds: 0 } : null;
         const heroHandStats = {};
 
         const totalBoards = binomial(deckLen, boardNeeded);
 
         if (active.length === 1) {
             winCounts[active[0]] = totalBoards;
-            equityNumerators[active[0]] = totalBoards;
-            return exactResult(winCounts, tieCounts, equityNumerators, totalBoards, heroHandStats);
+            equityNumerators[active[0]] = totalBoards * LCM_SHARE;
+            if (isHiLo) {
+                hiNumerators[active[0]] = totalBoards * LCM_SHARE;
+                hiLoCounts.noLowRounds = totalBoards;
+            }
+            return exactResult(winCounts, tieCounts, equityNumerators, totalBoards, heroHandStats,
+                hiNumerators, loNumerators, hiLoCounts);
         }
 
         const board = new Int32Array(5);
         for (let i = 0; i < knownBoard.length; i++) board[i] = knownBoard[i];
         const boardTriples = new Int32Array(30);
+        const lowTriples = new Int32Array(10);
         const values = new Array(playerCount).fill(0);
+        const loValues = new Array(playerCount).fill(NO_LOW);
         const knownBoardLen = knownBoard.length;
 
         const idx = new Int32Array(boardNeeded);
@@ -588,15 +755,26 @@
 
         for (;;) {
             for (let b = 0; b < boardNeeded; b++) board[knownBoardLen + b] = deck[idx[b]];
-            if (isOmaha) expandBoardTriples(board, boardTriples);
+            let lowPossible = false;
+            if (isOmaha) {
+                expandBoardTriples(board, boardTriples);
+                if (isHiLo) lowPossible = expandBoardLowTriples(board, lowTriples);
+            }
 
             let maxValue = -1, winnerCount = 0;
+            let loMin = NO_LOW, loWinnerCount = 0;
             for (let a = 0; a < active.length; a++) {
                 const i = active[a];
                 const value = isOmaha
                     ? evalOmahaFast(fixedHands[i], holePairs, boardTriples)
                     : eval7(fixedHands[i][0], fixedHands[i][1], board[0], board[1], board[2], board[3], board[4]);
                 values[i] = value;
+                if (isHiLo) {
+                    const lo = lowPossible ? evalOmahaLowFast(fixedHands[i], holePairs, lowTriples) : NO_LOW;
+                    loValues[i] = lo;
+                    if (lo < loMin) { loMin = lo; loWinnerCount = 1; }
+                    else if (lo === loMin && loMin !== NO_LOW) loWinnerCount++;
+                }
                 if (value > maxValue) { maxValue = value; winnerCount = 1; }
                 else if (value === maxValue) winnerCount++;
             }
@@ -606,14 +784,43 @@
                 heroHandStats[name] = (heroHandStats[name] || 0) + 1;
             }
 
-            // Osoittajat pidetään kokonaislukuina: jaetaan vasta lopuksi
-            const scaled = LCM_SHARE / winnerCount;
-            for (let a = 0; a < active.length; a++) {
-                const i = active[a];
-                if (values[i] === maxValue) {
-                    if (winnerCount === 1) winCounts[i]++;
-                    else tieCounts[i]++;
-                    equityNumerators[i] += scaled;
+            if (isHiLo) {
+                // Osoittajat kokonaislukuina yksikössä 1/LCM_SHARE:
+                // puolikas potti on LCM_SHARE/2, ja sekin jakautuu tasan
+                // korkeintaan 10 voittajalle (5040/2/k on kokonaisluku)
+                if (loWinnerCount === 0) hiLoCounts.noLowRounds++;
+                if (state[0] !== 0) {
+                    if (loValues[0] !== NO_LOW) hiLoCounts.heroLowMade++;
+                    if (loWinnerCount > 0 && loValues[0] === loMin) hiLoCounts.heroLowWon++;
+                }
+                for (let a = 0; a < active.length; a++) {
+                    const i = active[a];
+                    let hiPart = 0, loPart = 0;
+                    if (values[i] === maxValue) {
+                        hiPart = loWinnerCount === 0
+                            ? LCM_SHARE / winnerCount
+                            : (LCM_SHARE / 2) / winnerCount;
+                    }
+                    if (loWinnerCount > 0 && loValues[i] === loMin) {
+                        loPart = (LCM_SHARE / 2) / loWinnerCount;
+                    }
+                    const share = hiPart + loPart;
+                    if (share === LCM_SHARE) winCounts[i]++;
+                    else if (share > 0) tieCounts[i]++;
+                    hiNumerators[i] += hiPart;
+                    loNumerators[i] += loPart;
+                    equityNumerators[i] += share;
+                }
+            } else {
+                // Osoittajat pidetään kokonaislukuina: jaetaan vasta lopuksi
+                const scaled = LCM_SHARE / winnerCount;
+                for (let a = 0; a < active.length; a++) {
+                    const i = active[a];
+                    if (values[i] === maxValue) {
+                        if (winnerCount === 1) winCounts[i]++;
+                        else tieCounts[i]++;
+                        equityNumerators[i] += scaled;
+                    }
                 }
             }
 
@@ -628,16 +835,21 @@
             for (let j = i + 1; j < boardNeeded; j++) idx[j] = idx[j - 1] + 1;
         }
 
-        return exactResult(winCounts, tieCounts, equityNumerators, totalBoards, heroHandStats);
+        return exactResult(winCounts, tieCounts, equityNumerators, totalBoards, heroHandStats,
+            hiNumerators, loNumerators, hiLoCounts);
     }
 
-    // Pienin yhteinen jaettava 1..10 voittajalle, jotta osuudet pysyvät
-    // kokonaislukuina eikä liukulukupyöristystä kerry miljooniin pöytiin
-    const LCM_SHARE = 2520;
+    // Pienin yhteinen jaettava, jotta osuudet pysyvät kokonaislukuina eikä
+    // liukulukupyöristystä kerry miljooniin pöytiin. Hi/Lo:ssa puolikas
+    // potti jakautuu korkeintaan 10 voittajalle, joten jaettavaksi tarvitaan
+    // LCM(2,4,...,20) = 5040 - pelkkä LCM(1..10) = 2520 ei riitä (2520/16
+    // ei ole kokonaisluku).
+    const LCM_SHARE = 5040;
 
-    function exactResult(winCounts, tieCounts, equityNumerators, totalBoards, heroHandStats) {
+    function exactResult(winCounts, tieCounts, equityNumerators, totalBoards, heroHandStats,
+        hiNumerators, loNumerators, hiLoCounts) {
         const denom = totalBoards * LCM_SHARE;
-        return {
+        const result = {
             exact: true,
             boards: totalBoards,
             winCounts,
@@ -651,11 +863,22 @@
             simulationCount: totalBoards,
             heroHandStats
         };
+        if (hiNumerators) {
+            result.hiEquityPercentages = hiNumerators.map(e => (e / denom) * 100);
+            result.loEquityPercentages = loNumerators.map(e => (e / denom) * 100);
+            result.hiLoStats = {
+                heroLowMade: hiLoCounts.heroLowMade,
+                heroLowWon: hiLoCounts.heroLowWon,
+                noLowRounds: hiLoCounts.noLowRounds
+            };
+        }
+        return result;
     }
 
     const PokerEngine = {
         cardToInt, intToCard, categoryOf,
         eval5, eval7, evalOmaha,
+        evalOmahaLow, NO_LOW,
         HOLE_PAIRS, CATEGORY_NAMES,
         runSimulation, enumerateExact, exactPlan, binomial
     };

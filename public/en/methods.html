@@ -156,6 +156,31 @@
             bound.
         </p>
 
+        <h2>Omaha Hi/Lo in the simulator</h2>
+        <p>
+            The simulator also supports four-card Omaha Hi/Lo
+            (8-or-better). The pot is split in half: one half goes to the
+            best high hand and the other to the best low hand. A qualifying
+            low is five distinct ranks, all eight or lower, with the ace
+            playing low — straights and flushes do not count against a low.
+            Each half uses exactly two hole cards and three board cards,
+            and they may be different cards. If nobody makes a qualifying
+            low (the board must contain three distinct ranks of eight or
+            lower), the high hand takes the whole pot.
+        </p>
+        <p>
+            In the results, <strong>equity</strong> is the player's average
+            share of the pot, <strong>scoop</strong> means taking the whole
+            pot alone, and <strong>part-pot</strong> is any shared portion
+            (for example a quarter, when the low is split). The Hi/Lo row
+            breaks equity down by half: the hi share includes the whole pot
+            from rounds where no low was made, so hi + lo = equity. Exact
+            enumeration works in Hi/Lo just as in the other game types when
+            every player's cards are known. Precomputed preflop tables for
+            Hi/Lo do not exist yet, so all-in preflop against unknown
+            opponents is computed by simulation.
+        </p>
+
         <h2>Data and license</h2>
         <p>
             The tables can be downloaded as CSV from the
