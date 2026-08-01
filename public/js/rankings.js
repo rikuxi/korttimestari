@@ -127,6 +127,9 @@ document.addEventListener('DOMContentLoaded', () => {
     function renderRows(data) {
         const isHoldem = state.gameType === 'holdem';
         tableEl.classList.toggle('no-label-col', isHoldem);
+        // Eksaktissa taulukossa keskivirhe on nolla joka rivillä, joten
+        // sarake ei kerro mitään - piilotetaan ja jätetään tila muille
+        tableEl.classList.toggle('no-se-col', data.exact === true);
         // Pelimuotokohtaiset sarakeleveydet (ks. style.css: Sarakeleveydet)
         tableEl.setAttribute('data-game', state.gameType);
         bodyEl.innerHTML = '';
@@ -164,13 +167,22 @@ document.addEventListener('DOMContentLoaded', () => {
             equity.textContent = h.equity.toFixed(4);
             tr.appendChild(equity);
 
+            // Hi/Lo-erittely: solut luodaan aina, jotta sarakemäärä pysyy
+            // samana; CSS piilottaa ne muissa pelimuodoissa
+            for (const val of [h.hiEquity, h.loEquity]) {
+                const td = document.createElement('td');
+                td.className = 'col-num col-hilo';
+                td.textContent = typeof val === 'number' ? val.toFixed(2) : '';
+                tr.appendChild(td);
+            }
+
             const topPct = document.createElement('td');
             topPct.className = 'col-num';
             topPct.textContent = h.topPct !== undefined ? fmtTopPct(h.topPct) : '';
             tr.appendChild(topPct);
 
             const se = document.createElement('td');
-            se.className = 'col-num';
+            se.className = 'col-num col-se';
             se.textContent = h.se > 0 ? `± ${h.se.toFixed(4)}` : t('rk.exactSe');
             tr.appendChild(se);
 
@@ -184,7 +196,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (data.hands.length === 0) {
             const tr = document.createElement('tr');
             const td = document.createElement('td');
-            td.colSpan = 7;
+            td.colSpan = 9;
             td.className = 'no-results';
             td.textContent = t('rk.noResults');
             tr.appendChild(td);
@@ -210,7 +222,7 @@ document.addEventListener('DOMContentLoaded', () => {
         detail.className = 'detail-row';
         detail.setAttribute('data-key', hand.key);
         const td = document.createElement('td');
-        td.colSpan = 7;
+        td.colSpan = 9;
         td.textContent = t('rk.loadingDetail');
         detail.appendChild(td);
         tr.after(detail);
@@ -267,6 +279,33 @@ document.addEventListener('DOMContentLoaded', () => {
             sub.appendChild(row);
         }
         td.appendChild(sub);
+
+        // Hi/Lo: pelaajamäärävertailussa on toistaiseksi vain heads-up, joten
+        // paneelissa on tilaa sille mitä päätaulukkoon ei mahdu - kuinka usein
+        // puoliskot voitetaan ja miten koko potinosuus jakautuu.
+        const hl = data.byPlayers.find(r => r.scoop !== undefined);
+        if (hl) {
+            const pct = x => x.toLocaleString(locale,
+                { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' %';
+            const list = document.createElement('ul');
+            list.className = 'hand-detail-extra';
+            for (const text of [
+                t('rk.detailHalves', {
+                    hiWin: pct(hl.hiWin), hiTie: pct(hl.hiTie),
+                    loWin: pct(hl.loWin), loTie: pct(hl.loTie)
+                }),
+                t('rk.detailShares', {
+                    scoop: pct(hl.scoop), part: pct(hl.partPot),
+                    quarter: pct(hl.quarter), none: pct(hl.scoopedOn)
+                }),
+                t('rk.detailLow', { made: pct(hl.lowMade), nut: pct(hl.nutLow) })
+            ]) {
+                const li = document.createElement('li');
+                li.textContent = text;
+                list.appendChild(li);
+            }
+            td.appendChild(list);
+        }
     }
 
     function renderPager(total) {

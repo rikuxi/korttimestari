@@ -117,6 +117,8 @@
                         <th class="col-hand">Hand</th>
                         <th class="col-label">Name</th>
                         <th class="col-num col-equity">Equity %</th>
+                        <th class="col-num col-hilo" title="Share of the whole pot won through the high half; includes the whole pot from deals where no low was made">Hi %</th>
+                        <th class="col-num col-hilo" title="Share of the whole pot won through the low half; Hi % + Lo % = Equity %">Lo %</th>
                         <th class="col-num col-toppct" title="Share of all combos at least as good, this hand included">Top %</th>
                         <th class="col-num col-se">Std. error</th>
                         <th class="col-num col-combos">Combos</th>
@@ -177,8 +179,11 @@
         <p class="data-license-note">
             The heads-up tables (Hold'em, Omaha, Omaha Hi/Lo) are exact:
             every board and every opponent hand has been enumerated. Omaha
-            Hi/Lo equity is the average share of the split pot (hi and low
-            halves; the CSV breaks them out). The rest were computed
+            Hi/Lo equity is the average share of the split pot, and the Hi and
+            Lo columns show how much of it comes from each half. Clicking a row
+            also shows how often each half is won, how often the pot is scooped
+            and how often the share drops to a quarter; the CSV contains every
+            figure. The rest were computed
             with a hybrid method (exact over all boards, Monte Carlo over
             opponent card removal) and each row shows its standard error.
             The rank range in parentheses tells which ranks the hand could

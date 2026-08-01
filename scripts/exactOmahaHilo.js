@@ -59,11 +59,17 @@ function formatDuration(ms) {
 // Kerättävät sarjat. Nimet ovat samat workerin acc-objektissa,
 // checkpointissa ja tilassa, joten uuden sarjan lisääminen ei vaadi
 // muutoksia kolmeen paikkaan.
-const SERIES = ['hi', 'lo', 'hiWin', 'hiTie', 'loWin', 'loTie'];
+const SERIES = ['hi', 'lo', 'hiWin', 'hiTie', 'loWin', 'loTie',
+    'q0', 'q1', 'q2', 'q3', 'q4', 'lowMade', 'nutLow',
+    'cat0', 'cat1', 'cat2', 'cat3', 'cat4', 'cat5', 'cat6', 'cat7', 'cat8'];
+
+// Käsiluokkien nimet (sama järjestys kuin public/js/engine.js)
+const CATEGORY_NAMES = ['high card', 'one pair', 'two pairs', 'three of a kind',
+    'straight', 'flush', 'full house', 'four of a kind', 'straight flush'];
 
 // Checkpointin muoto. Kasvatetaan kun kerättävät sarjat muuttuvat, jotta
 // vanha checkpoint ei sekoitu hiljaa uusiin tuloksiin.
-const CHECKPOINT_FORMAT = 2;
+const CHECKPOINT_FORMAT = 4;
 
 function saveCheckpoint(file, state) {
     const tmp = file + '.tmp';
@@ -208,6 +214,41 @@ function verifyTotals(classes, state) {
     console.log(`  hi-taajuudet: 2 x ${hiWin} + ${hiTie} vs ${pairs} -> ${hiOk ? 'OK' : 'VIRHE'}`);
     ok = hiOk && ok;
 
+    // Osuusjakauma: kappalemäärien on summauduttava kaikkiin pareihin, ja
+    // neljänneksillä painotettuna sen on toistettava koko osuussumma.
+    let qn = 0n, qs = 0n;
+    for (let i = 0; i < N_CLASSES; i++) {
+        qn += BigInt(state.q0[i]) + BigInt(state.q1[i]) + BigInt(state.q2[i])
+            + BigInt(state.q3[i]) + BigInt(state.q4[i]);
+        qs += BigInt(state.q1[i]) + 2n * BigInt(state.q2[i])
+            + 3n * BigInt(state.q3[i]) + 4n * BigInt(state.q4[i]);
+    }
+    const qnOk = qn === pairs;
+    console.log(`  osuusjakauman summa: ${qn} vs ${pairs} -> ${qnOk ? 'OK' : 'VIRHE'}`);
+    ok = qnOk && ok;
+    const qsOk = qs === total;
+    console.log(`  osuusjakauma painotettuna = kokonaisosuus -> ${qsOk ? 'OK' : 'VIRHE'}`);
+    ok = qsOk && ok;
+
+    // Scoopatut ja scooppaajat ovat sama joukko toisin päin: jokainen pari
+    // jossa A vie koko potin antaa A:lle q4:n ja B:lle q0:n.
+    let sq4 = 0n, sq0 = 0n;
+    for (let i = 0; i < N_CLASSES; i++) { sq4 += BigInt(state.q4[i]); sq0 += BigInt(state.q0[i]); }
+    const scoopOk = sq4 === sq0;
+    console.log(`  scoopit = scoopatut: ${sq4} vs ${sq0} -> ${scoopOk ? 'OK' : 'VIRHE'}`);
+    ok = scoopOk && ok;
+
+    // Käsiluokkajakauman on katettava jokainen (käsi, pöytä) -pari tasan
+    // kerran: jokaisella kädellä on jokaisella pöydällä yksi paras korkea käsi.
+    let catAll = 0n;
+    for (let k = 0; k < 9; k++) {
+        for (let i = 0; i < N_CLASSES; i++) catAll += BigInt(state['cat' + k][i]);
+    }
+    const catExpected = BigInt(N_BOARDS) * BigInt(N_HANDS_PER_BOARD);
+    const catOk = catAll === catExpected;
+    console.log(`  käsiluokkajakauma: ${catAll} vs ${catExpected} -> ${catOk ? 'OK' : 'VIRHE'}`);
+    ok = catOk && ok;
+
     // Low-taajuudet ja low-osuus mittaavat samaa asiaa eri yksiköissä:
     // voitettu puolisko on 2 neljännestä, jaettu 1. (Työläinen tarkistaa
     // tämän jo käsikohtaisesti; tässä se varmistetaan vielä koostetusti,
@@ -259,6 +300,32 @@ function writeOutputs(classes, state, dataDir, elapsedMs) {
             hiTieCount: state.hiTie[i],
             loWinCount: state.loWin[i],
             loTieCount: state.loTie[i],
+            // Koko potinosuuden jakauma: scoop = koko potti yksin,
+            // osapotti = jokin osa muttei kaikkea, quarter = neljännes
+            // (kvartautuminen), scoopedOn = vastustaja vei koko potin.
+            scoop: 100 * state.q4[i] / deals,
+            partPot: 100 * (state.q1[i] + state.q2[i] + state.q3[i]) / deals,
+            quarter: 100 * state.q1[i] / deals,
+            threeQuarters: 100 * state.q3[i] / deals,
+            half: 100 * state.q2[i] / deals,
+            scoopedOn: 100 * state.q0[i] / deals,
+            scoopCount: state.q4[i],
+            quarterCount: state.q1[i],
+            halfCount: state.q2[i],
+            threeQuarterCount: state.q3[i],
+            scoopedOnCount: state.q0[i],
+            // Vastustajasta riippumattomat: kuinka usein käsi tekee
+            // kelvollisen low'n ja kuinka usein se on pöydän paras low.
+            // Nimittäjä on pöytien määrä, ei (pöytä, vastustaja) -parien.
+            lowMade: 100 * state.lowMade[i] / (c.combos * BOARDS_PER_HAND),
+            nutLow: 100 * state.nutLow[i] / (c.combos * BOARDS_PER_HAND),
+            lowMadeCount: state.lowMade[i],
+            nutLowCount: state.nutLow[i],
+            // Käden oma korkea käsiluokka riverillä: kuinka usein se on
+            // pari, kaksi paria, ... Ei riipu vastustajasta.
+            handCategories: Object.fromEntries(CATEGORY_NAMES.map((n, k) =>
+                [n, 100 * state['cat' + k][i] / (c.combos * BOARDS_PER_HAND)])),
+            boards: c.combos * BOARDS_PER_HAND,
             deals
         };
     });
@@ -286,7 +353,15 @@ function writeOutputs(classes, state, dataDir, elapsedMs) {
                 hiWin: 'kuinka usein korkea puolisko voitetaan yksin',
                 hiTie: 'kuinka usein korkea puolisko jaetaan',
                 loWin: 'kuinka usein matala puolisko voitetaan yksin',
-                loTie: 'kuinka usein matala puolisko jaetaan (kvartautuminen)'
+                loTie: 'kuinka usein matala puolisko jaetaan',
+                scoop: 'kuinka usein koko potti voitetaan yksin',
+                partPot: 'kuinka usein saadaan osa potista muttei kaikkea',
+                quarter: 'kuinka usein osuudeksi jää neljännes (kvartautuminen)',
+                half: 'kuinka usein osuudeksi jää puolet',
+                threeQuarters: 'kuinka usein osuudeksi jää kolme neljännestä',
+                scoopedOn: 'kuinka usein vastustaja vie koko potin',
+                lowMade: 'kuinka usein käsi tekee kelvollisen matalan käden (ei riipu vastustajasta)',
+                nutLow: 'kuinka usein käsi tekee pöydän parhaan matalan käden (ei riipu vastustajasta)'
             },
             computeSeconds: Math.round(elapsedMs / 1000),
             generatedAt: new Date().toISOString(),
@@ -305,6 +380,16 @@ function writeOutputs(classes, state, dataDir, elapsedMs) {
             hiTie: round(h.hiTie, 6),
             loWin: round(h.loWin, 6),
             loTie: round(h.loTie, 6),
+            scoop: round(h.scoop, 6),
+            partPot: round(h.partPot, 6),
+            quarter: round(h.quarter, 6),
+            half: round(h.half, 6),
+            threeQuarters: round(h.threeQuarters, 6),
+            scoopedOn: round(h.scoopedOn, 6),
+            lowMade: round(h.lowMade, 6),
+            nutLow: round(h.nutLow, 6),
+            handCategories: Object.fromEntries(
+                Object.entries(h.handCategories).map(([k, v]) => [k, round(v, 4)])),
             hiNumerator: h.hiNumerator,
             loNumerator: h.loNumerator,
             denominator: h.denominator,
@@ -312,7 +397,15 @@ function writeOutputs(classes, state, dataDir, elapsedMs) {
             hiTieCount: h.hiTieCount,
             loWinCount: h.loWinCount,
             loTieCount: h.loTieCount,
+            scoopCount: h.scoopCount,
+            quarterCount: h.quarterCount,
+            halfCount: h.halfCount,
+            threeQuarterCount: h.threeQuarterCount,
+            scoopedOnCount: h.scoopedOnCount,
+            lowMadeCount: h.lowMadeCount,
+            nutLowCount: h.nutLowCount,
             deals: h.deals,
+            boards: h.boards,
             rankLow: h.rankLow,
             rankHigh: h.rankHigh
         }))
@@ -324,14 +417,26 @@ function writeOutputs(classes, state, dataDir, elapsedMs) {
 
     const lines = ['rank,hand,label,notation,combos,equity_pct,hi_equity_pct,lo_equity_pct,' +
         'hi_win_pct,hi_tie_pct,lo_win_pct,lo_tie_pct,' +
+        'scoop_pct,part_pot_pct,quarter_pct,half_pct,three_quarters_pct,scooped_on_pct,' +
+        'low_made_pct,nut_low_pct,' +
+        'cat_high_card_pct,cat_one_pair_pct,cat_two_pairs_pct,cat_trips_pct,' +
+        'cat_straight_pct,cat_flush_pct,cat_full_house_pct,cat_quads_pct,cat_straight_flush_pct,' +
         'hi_numerator,lo_numerator,denominator,' +
-        'hi_win_count,hi_tie_count,lo_win_count,lo_tie_count,deals,rank_low,rank_high'];
+        'hi_win_count,hi_tie_count,lo_win_count,lo_tie_count,' +
+        'scoop_count,quarter_count,half_count,three_quarter_count,scooped_on_count,' +
+        'low_made_count,nut_low_count,deals,boards,rank_low,rank_high'];
     for (const h of hands) {
         lines.push([h.rank, h.key, h.label, h.notation, h.combos,
             round(h.equity, 6), round(h.hiEquity, 6), round(h.loEquity, 6),
             round(h.hiWin, 6), round(h.hiTie, 6), round(h.loWin, 6), round(h.loTie, 6),
+            round(h.scoop, 6), round(h.partPot, 6), round(h.quarter, 6),
+            round(h.half, 6), round(h.threeQuarters, 6), round(h.scoopedOn, 6),
+            round(h.lowMade, 6), round(h.nutLow, 6),
+            ...CATEGORY_NAMES.map(n => round(h.handCategories[n], 4)),
             h.hiNumerator, h.loNumerator, h.denominator,
-            h.hiWinCount, h.hiTieCount, h.loWinCount, h.loTieCount, h.deals,
+            h.hiWinCount, h.hiTieCount, h.loWinCount, h.loTieCount,
+            h.scoopCount, h.quarterCount, h.halfCount, h.threeQuarterCount, h.scoopedOnCount,
+            h.lowMadeCount, h.nutLowCount, h.deals, h.boards,
             h.rankLow, h.rankHigh].join(','));
     }
     const csvPath = path.join(dataDir, 'preflop-omahahilo-2max-exact.csv');

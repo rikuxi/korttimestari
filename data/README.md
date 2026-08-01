@@ -78,11 +78,26 @@ Näiden nimittäjä on `deals` = kombot × C(48,5) × C(43,4) eli
 koska luku on osuus jaoista eikä potista. Kokonaislukukappalemäärät ovat
 sarakkeissa `hiWinCount`, `hiTieCount`, `loWinCount` ja `loTieCount`.
 
-`loTie` on hi/lo:n kannalta erityisen kiinnostava: se on
-**kvartautumistaajuus** eli kuinka usein matala puolisko jaetaan, jolloin
-osuudeksi jää neljännes potista. Satunnaista kättä vastaan luku on pieni,
-mutta se tekee näkyväksi sen oletuksen johon koko taulukko perustuu (ks.
-alla kohta järjestyksen rajoista).
+Kolmantena on **koko potinosuuden jakauma**: `scoop` (koko potti yksin),
+`partPot` (jokin osa muttei kaikkea), `quarter` (osuudeksi jää neljännes),
+`half`, `threeQuarters` ja `scoopedOn` (vastustaja vie kaiken). Näiden
+summa on 100 %, ja neljänneksillä painotettuna ne toistavat equityn -
+kumpikin tarkistetaan ajossa. Scoop vaatii hi:n ja low'n **yhteisjakauman**
+eikä seuraa muista sarakkeista: mittausten mukaan `scoop / hiWin` vaihtelee
+0,60:stä 0,94:ään. Esimerkiksi KKQQ (ds) voittaa korkean puoliskon useammin
+kuin listan ykönen mutta scooppaa selvästi harvemmin, koska low-pöydällä
+se saa vain puolikkaan.
+
+Kaksi saraketta ei riipu vastustajasta lainkaan: `lowMade` kertoo kuinka
+usein käsi tekee kelvollisen matalan käden ja `nutLow` kuinka usein se on
+pöydän paras mahdollinen low. Niiden nimittäjä on `boards` = kombot ×
+C(48,5), ei (pöytä, vastustaja) -parien määrä.
+
+`quarter` on hi/lo:n kannalta erityisen kiinnostava: se on
+**kvartautumistaajuus** eli kuinka usein osuudeksi jää neljännes potista.
+Satunnaista kättä vastaan luku on pieni, mutta se tekee näkyväksi sen
+oletuksen johon koko taulukko perustuu (ks. alla kohta järjestyksen
+rajoista).
 
 ### Sija-alue `rankLow`/`rankHigh` (CSV: `rank_low`/`rank_high`)
 

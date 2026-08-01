@@ -2098,8 +2098,19 @@ button.example-chip:hover {
     min-width: 850px;
 }
 .rankings-table th.col-rank { width: 130px; }
-.rankings-table[data-game="omaha"] th.col-rank { width: 195px; }
+.rankings-table[data-game="omaha"] th.col-rank,
+.rankings-table[data-game="omahahilo"] th.col-rank { width: 195px; }
 .rankings-table[data-game="omaha5"] th.col-rank { width: 218px; }
+
+/* Hi/Lo-sarakkeet vain siinä pelimuodossa; keskivirhesarake piilotetaan
+   eksakteilta taulukoilta, joissa jokaisella rivillä lukisi "tarkka" */
+.rankings-table:not([data-game="omahahilo"]) .col-hilo {
+    display: none;
+}
+
+.rankings-table.no-se-col .col-se {
+    display: none;
+}
 
 /* Kapealla näytöllä kiinteä tasajako tuhlaa tilan: "AA"-solu saisi yhtä
    leveän sarakkeen kuin Keskivirhe, ja Equity jäisi ruudun ulkopuolelle.
@@ -2115,6 +2126,7 @@ button.example-chip:hover {
     }
     .rankings-table th.col-rank,
     .rankings-table[data-game="omaha"] th.col-rank,
+    .rankings-table[data-game="omahahilo"] th.col-rank,
     .rankings-table[data-game="omaha5"] th.col-rank {
         width: auto;
     }
@@ -2134,6 +2146,17 @@ button.example-chip:hover {
 
 .rankings-table.no-label-col .col-label {
     display: none;
+}
+
+/* Hi/Lo:n lisätiedot avatussa rivissä */
+.hand-detail-extra {
+    margin: 10px 0 2px 18px;
+    font-size: 13px;
+    color: var(--text-muted);
+}
+
+.hand-detail-extra li {
+    margin-bottom: 3px;
 }
 
 .rankings-table .no-results {

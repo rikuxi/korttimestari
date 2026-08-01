@@ -79,11 +79,25 @@ Their denominator is `deals` = combos × C(48,5) × C(43,4), the number of
 figure is a share of deals rather than of the pot. The integer counts are
 in `hiWinCount`, `hiTieCount`, `loWinCount` and `loTieCount`.
 
-`loTie` is the one to watch in hi/lo: it is the **quartering frequency**,
-how often the low half is split so that the share drops to a quarter of
-the pot. Against a random hand the figure is small, but it makes visible
-the assumption the whole table rests on (see the note on ranking limits
-below).
+Third comes the **distribution of the whole pot share**: `scoop` (whole pot
+alone), `partPot` (some of it but not all), `quarter` (the share drops to a
+quarter), `half`, `threeQuarters` and `scoopedOn` (the opponent takes
+everything). These sum to 100 %, and weighted by quarters they reproduce the
+equity - both are checked during the run. Scoop requires the **joint**
+distribution of high and low and does not follow from the other columns:
+measured, `scoop / hiWin` ranges from 0.60 to 0.94. KKQQ (ds), for example,
+takes the high half more often than the top-ranked hand but scoops far less,
+because on a low board it only gets half.
+
+Two columns do not depend on the opponent at all: `lowMade` is how often the
+hand makes a qualifying low and `nutLow` how often that low is the best one
+available on the board. Their denominator is `boards` = combos × C(48,5),
+not the number of (board, opponent) pairs.
+
+`quarter` is the one to watch in hi/lo: it is the **quartering frequency**,
+how often the share drops to a quarter of the pot. Against a random hand the
+figure is small, but it makes visible the assumption the whole table rests on
+(see the note on ranking limits below).
 
 ### Rank range `rankLow`/`rankHigh` (CSV: `rank_low`/`rank_high`)
 

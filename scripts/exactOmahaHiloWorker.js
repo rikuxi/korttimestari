@@ -37,6 +37,11 @@ const N_ROWS = ROW_TRIPLE + N_TRIPLES;
 // summien nollarivi). 64 antaa varaa; ylitys on koodivirhe ja kaataa ajon.
 const LSTRIDE = 64;
 
+// Yhteisjakauman tasojen määrä. Käytännössä eri low-arvoja on pöydällä aina
+// tasan 10 (todistettu tyhjentävästi kaikista pöydän arvojoukoista), ja
+// kyselyt osuvat tasoille 0..RL, joten 11 riittäisi. 12 antaa varaa.
+const G_LEVELS = 12;
+
 const NO_LOW = 0x100;
 
 // Kortin low-bitti, tai 0 jos kortti ei kelpaa low'hun (9..K).
@@ -83,8 +88,32 @@ function createHiloBuffers() {
     buf.hiT = new Float64Array(N_HANDS);
     buf.loW = new Float64Array(N_HANDS);
     buf.loT = new Float64Array(N_HANDS);
+    // Koko potinosuuden jakauma neljänneksinä: montako vastustajaa vastaan
+    // hero saa 0, 1, 2, 3 tai 4 neljännestä. q4 = scoop, q0 = vastustaja
+    // scooppasi, q1..q3 = osapotti (q1 = kvartautuminen). Tästä saadaan
+    // scoop ja osapotti, ja summa Σ q*n(q) on tarkistettavissa jo
+    // laskettua osuutta (hi4 + lo4) vastaan.
+    buf.q = [0, 1, 2, 3, 4].map(() => new Int32Array(N_HANDS));
+    // Yhteisjakauma: ainoa rakenne joka vaatii hi:n ja low'n yhteisjakauman
+    // (kaikki muu tulee marginaaleista). Indeksointi (rivi, hi, low-taso) on
+    // järjestetty niin että low-taso on SISIN: käsi kirjataan kaikille
+    // tasoille 0..g, mikä on tässä järjestyksessä yhtenäinen jono eikä
+    // yhtätoista hajallaan olevaa kirjoitusta. Sillä on iso merkitys, koska
+    // rakenne ei mahdu välimuistiin.
+    //
+    // Uint16 riittää kaikille riveille paitsi globaalille: yksittäinen
+    // kortti esiintyy C(46,3) = 15 180 kädessä, pari 990:ssä ja kolmikko
+    // 44:ssä. Globaali rivi (178 365) pidetään erillisessä 32-bittisessä
+    // taulukossa - se on inkluusio-ekskluusion ensimmäinen termi.
+    buf.hist2 = new Uint16Array(N_ROWS * buf.stride * G_LEVELS);
+    buf.hist2g = new Uint32Array(buf.stride * G_LEVELS);
+    // Pakatun hi-arvon käsiluokka (0 = hai .. 8 = värisuora)
+    buf.catOf = new Int32Array(buf.stride);
     return buf;
 }
+
+// Yhteisjakauman rivisiirtymien esivaraus (15 riviä per käsi)
+const scratchRows = new Int32Array(14);
 
 // Pöydän summainvariantti: jokainen järjestetty (hero, vastustaja) -pari
 // jakaa tasan yhden potin, joten neljännesosuuksien summa pöytää kohti on
@@ -102,6 +131,7 @@ function solveBoardHiLo(board, buf) {
     prepareBoard(board, buf);
     const R = buf.R;
     const { rest, handVal, pairLoG, handLoG, loMasks, hi4, lo4, hiW, hiT, loW, loT } = buf;
+    const q0 = buf.q[0], q1 = buf.q[1], q2 = buf.q[2], q3 = buf.q[3], q4 = buf.q[4];
 
     // --- Pöydän low-kolmikot: 10 kolmikkoa, kelvollisissa 3 eri low-arvoa ---
     const bt = [];
@@ -120,9 +150,24 @@ function solveBoardHiLo(board, buf) {
         buf.stride = STRIDE;
         buf.hist = new Int32Array(N_ROWS * STRIDE);
         buf.histHL = new Int32Array(N_ROWS * STRIDE);
+        buf.hist2 = new Uint16Array(N_ROWS * STRIDE * G_LEVELS);
+        buf.hist2g = new Uint32Array(STRIDE * G_LEVELS);
+        buf.catOf = new Int32Array(STRIDE);
     }
     const HSTRIDE = buf.stride;
+
+    // Käsiluokka (hai .. värisuora) pakatusta hi-arvosta. prepareBoard
+    // jättää buf.distinct-taulukkoon pöydän eri raaka-arvot nousevaan
+    // järjestykseen, ja eval5 koodaa luokan kertoimella 15^5. Taulukko on
+    // korkeintaan 137 alkiota, joten luokka maksaa yhden haun per käsi
+    // eikä jakolaskua 178 365 kertaa pöytää kohti.
+    const catOf = buf.catOf;
+    for (let v = 0; v < R; v++) catOf[v] = (buf.distinct[v] / 759375) | 0;
+
     const hist = buf.hist, histHL = buf.histHL, histL = buf.histL;
+    const hist2 = buf.hist2, hist2g = buf.hist2g;
+    const G = G_LEVELS;                  // low-taso on sisin indeksi
+    const rows2 = scratchRows;           // 14 rivisiirtymää, esivarattu
     const { rowCard, rowPair, rowTriple } = buf;
     for (let i = 0; i < REST; i++) rowCard[i] = (ROW_CARD + i) * HSTRIDE;
     for (let p = 0; p < N_PAIRS; p++) rowPair[p] = (ROW_PAIR + p) * HSTRIDE;
@@ -172,6 +217,11 @@ function solveBoardHiLo(board, buf) {
         if (RL + 1 > LSTRIDE) {
             throw new Error(`LSTRIDE ${LSTRIDE} ei riitä: pöydällä ${RL} eri low-maskia`);
         }
+        // Yhteisjakaumasta kysytään tasoja gh ja gh+1, joten ylin tarvittava
+        // taso on RL (aina tyhjä). Sen on mahduttava varattuun tilaan.
+        if (RL + 1 > G_LEVELS) {
+            throw new Error(`G_LEVELS ${G_LEVELS} ei riitä: pöydällä ${RL} eri low-arvoa`);
+        }
         const goodOf = new Map();
         for (let t = 0; t < RL; t++) goodOf.set(sorted[t], RL - 1 - t);
         for (let t = 0; t < RL; t++) loMasks[RL - 1 - t] = sorted[t];  // hyvyys -> maski
@@ -213,6 +263,8 @@ function solveBoardHiLo(board, buf) {
     if (lowPossible) {
         histHL.fill(0, 0, N_ROWS * HSTRIDE);
         histL.fill(0, 0, N_ROWS * LSTRIDE);
+        hist2.fill(0, 0, N_ROWS * HSTRIDE * G);
+        hist2g.fill(0, 0, HSTRIDE * G);
     }
     for (let l = 3; l < REST; l++) {
         const c4l = C4[l], c3l = C3[l], c2l = C2[l], rl = rowCard[l], sl = lRowCard[l];
@@ -266,6 +318,29 @@ function solveBoardHiLo(board, buf) {
                             histL[lRowTriple[b3ijl + i] + g]++;
                             histL[lRowTriple[b3ikl + i] + g]++;
                             histL[sjkl + g]++;
+
+                            // Yhteisjakauma: kirjataan käsi kaikille tasoille
+                            // 0..g, jolloin taso tarkoittaa "low-hyvyys >= taso"
+                            // eikä erillistä g-suuntaista summausta tarvita.
+                            // Tasot ovat vierekkäin, joten tämä on 14 lyhyttä
+                            // yhtenäistä jonoa. rows2 on esivarattu - allokointi
+                            // tässä silmukassa maksaisi 178 365 kertaa/pöytä.
+                            rows2[0] = (rowCard[i] + v) * G; rows2[1] = (rj + v) * G;
+                            rows2[2] = (rk + v) * G; rows2[3] = (rl + v) * G;
+                            rows2[4] = (rowPair[c2j + i] + v) * G;
+                            rows2[5] = (rowPair[c2k + i] + v) * G;
+                            rows2[6] = (rowPair[c2l + i] + v) * G;
+                            rows2[7] = (rjk + v) * G; rows2[8] = (rjl + v) * G;
+                            rows2[9] = (rkl + v) * G;
+                            rows2[10] = (rowTriple[b3ijk + i] + v) * G;
+                            rows2[11] = (rowTriple[b3ijl + i] + v) * G;
+                            rows2[12] = (rowTriple[b3ikl + i] + v) * G;
+                            rows2[13] = (rjkl + v) * G;
+                            const gBase = v * G;
+                            for (let gg = 0; gg <= g; gg++) {
+                                hist2g[gBase + gg]++;
+                                for (let r = 0; r < 14; r++) hist2[rows2[r] + gg]++;
+                            }
                         }
                     }
                 }
@@ -283,6 +358,21 @@ function solveBoardHiLo(board, buf) {
             for (let v = R - 1; v >= 0; v--) histHL[off + v] += histHL[off + v + 1];
             const loff = row * LSTRIDE;
             for (let g = RL - 1; g >= 0; g--) histL[loff + g] += histL[loff + g + 1];
+        }
+        // Yhteisjakauma on jo kumulatiivinen low-suunnassa (rakennusvaiheessa),
+        // joten vain hi-suunnan suffiksisumma puuttuu. Tasot ovat vierekkäin,
+        // joten tämä käy taulukon läpi järjestyksessä.
+        const gTop = RL;
+        for (let v = R - 1; v >= 0; v--) {
+            const a = v * G, b = a + G;
+            for (let g = 0; g <= gTop; g++) hist2g[a + g] += hist2g[b + g];
+        }
+        for (let row = 1; row < N_ROWS; row++) {
+            const rowOff = row * HSTRIDE;
+            for (let v = R - 1; v >= 0; v--) {
+                const a = (rowOff + v) * G, b = a + G;
+                for (let g = 0; g <= gTop; g++) hist2[a + g] += hist2[b + g];
+            }
         }
     }
 
@@ -323,12 +413,15 @@ function solveBoardHiLo(board, buf) {
                     const t1 = ge - gt;        // hi tasan
 
                     if (!lowPossible) {
-                        // Pöydällä ei voi olla low'ta: hi vie koko potin
+                        // Pöydällä ei voi olla low'ta: hi vie koko potin,
+                        // joten osuus on 4, 2 tai 0 neljännestä
                         const s = 4 * a1 + 2 * t1;
                         hi4[idx] = s;
                         lo4[idx] = 0;
                         hiW[idx] = a1; hiT[idx] = t1;
                         loW[idx] = 0; loT[idx] = 0;
+                        q4[idx] = a1; q3[idx] = 0; q2[idx] = t1; q1[idx] = 0;
+                        q0[idx] = N_OPP - a1 - t1;
                         boardSum += s;
                         continue;
                     }
@@ -346,6 +439,26 @@ function solveBoardHiLo(board, buf) {
                         + (histL[sij] + histL[sik] + histL[sil] + histL[sjk] + histL[sjl] + histL[skl])
                         - (histL[sijk] + histL[sijl] + histL[sikl] + histL[sjkl])
                         + (g >= 0 ? 1 : 0);
+
+                    // Hi-vertailu pelkkiä low-käsiä vastaan. Tarvitaan
+                    // molemmissa haaroissa: ilman low'ta se erottaa ne
+                    // vastustajat jotka vievät matalan puoliskon, ja low'n
+                    // kanssa se antaa yhteisjakauman reunajakauman.
+                    // Nelikkötermi lasketaan mukaan vain jos hero itse on
+                    // low-käsi (silloin sen hi on tasan v).
+                    const geHL = histHL[v]
+                        - (histHL[ri + v] + histHL[rj + v] + histHL[rk + v] + histHL[rl + v])
+                        + (histHL[rij + v] + histHL[rik + v] + histHL[ril + v] + histHL[rjk + v] + histHL[rjl + v] + histHL[rkl + v])
+                        - (histHL[rijk + v] + histHL[rijl + v] + histHL[rikl + v] + histHL[rjkl + v])
+                        + (g >= 0 ? 1 : 0);
+                    const gtHL = histHL[w]
+                        - (histHL[ri + w] + histHL[rj + w] + histHL[rk + w] + histHL[rl + w])
+                        + (histHL[rij + w] + histHL[rik + w] + histHL[ril + w] + histHL[rjk + w] + histHL[rjl + w] + histHL[rkl + w])
+                        - (histHL[rijk + w] + histHL[rijl + w] + histHL[rikl + w] + histHL[rjkl + w]);
+                    const a2 = aOpp - geHL;  // low-kädet jotka hero voittaa hi:ssä
+                    const t2 = geHL - gtHL;  // low-kädet joiden kanssa hi tasan
+                    const nNL = N_OPP - aOpp;          // vastustajat ilman low'ta
+                    const nlWin = a1 - a2, nlTie = t1 - t2;   // hi-vertailu niitä vastaan
 
                     let s, h4, l4;
                     if (g >= 0) {
@@ -367,28 +480,74 @@ function solveBoardHiLo(board, buf) {
                         h4 = 2 * a1 + t1;
                         // Vastustaja jolla ei ole low'ta häviää low-puoliskon
                         // automaattisesti, joten hän kuuluu voitettuihin
-                        l4 = 2 * a3 + t3 + 2 * (N_OPP - aOpp);
+                        l4 = 2 * a3 + t3 + 2 * nNL;
                         hiW[idx] = a1; hiT[idx] = t1;
-                        loW[idx] = a3 + (N_OPP - aOpp); loT[idx] = t3;
+                        loW[idx] = a3 + nNL; loT[idx] = t3;
+
+                        // --- Osuusjakauma: tässä haarassa tarvitaan hi:n ja
+                        // low'n YHTEISJAKAUMA. Marginaalit eivät riitä, koska
+                        // scoop vaatii molempien puoliskojen voittamista samaa
+                        // vastustajaa vastaan. Neljä kyselyä yhteisjakaumaan
+                        // riittää 3x3-ristiintaulukon johtamiseen.
+                        // Indeksointi: (rivisiirtymä + hi) * tasot + taso.
+                        // Globaali rivi on omassa 32-bittisessä taulukossaan.
+                        const gv = v * G + g, gw = w * G + g;
+                        const gv1 = gv + 1, gw1 = gw + 1;
+                        const HH = hist2g[gv]
+                            - (hist2[ri * G + gv] + hist2[rj * G + gv] + hist2[rk * G + gv] + hist2[rl * G + gv])
+                            + (hist2[rij * G + gv] + hist2[rik * G + gv] + hist2[ril * G + gv] + hist2[rjk * G + gv] + hist2[rjl * G + gv] + hist2[rkl * G + gv])
+                            - (hist2[rijk * G + gv] + hist2[rijl * G + gv] + hist2[rikl * G + gv] + hist2[rjkl * G + gv]) + 1;
+                        const H1 = hist2g[gw]
+                            - (hist2[ri * G + gw] + hist2[rj * G + gw] + hist2[rk * G + gw] + hist2[rl * G + gw])
+                            + (hist2[rij * G + gw] + hist2[rik * G + gw] + hist2[ril * G + gw] + hist2[rjk * G + gw] + hist2[rjl * G + gw] + hist2[rkl * G + gw])
+                            - (hist2[rijk * G + gw] + hist2[rijl * G + gw] + hist2[rikl * G + gw] + hist2[rjkl * G + gw]);
+                        const H2 = hist2g[gv1]
+                            - (hist2[ri * G + gv1] + hist2[rj * G + gv1] + hist2[rk * G + gv1] + hist2[rl * G + gv1])
+                            + (hist2[rij * G + gv1] + hist2[rik * G + gv1] + hist2[ril * G + gv1] + hist2[rjk * G + gv1] + hist2[rjl * G + gv1] + hist2[rkl * G + gv1])
+                            - (hist2[rijk * G + gv1] + hist2[rijl * G + gv1] + hist2[rikl * G + gv1] + hist2[rjkl * G + gv1]);
+                        const H3 = hist2g[gw1]
+                            - (hist2[ri * G + gw1] + hist2[rj * G + gw1] + hist2[rk * G + gw1] + hist2[rl * G + gw1])
+                            + (hist2[rij * G + gw1] + hist2[rik * G + gw1] + hist2[ril * G + gw1] + hist2[rjk * G + gw1] + hist2[rjl * G + gw1] + hist2[rkl * G + gw1])
+                            - (hist2[rijk * G + gw1] + hist2[rijl * G + gw1] + hist2[rikl * G + gw1] + hist2[rjkl * G + gw1]);
+
+                        // Ristiintaulukko: rivi = vastustajan hi heroon nähden
+                        // (parempi / tasan / huonompi), sarake = sama low'lle.
+                        // Heron osuus on hi-neljännekset + low-neljännekset.
+                        const gtBetter = H3;                     // hi parempi, low parempi -> 0
+                        const gtEqual = H1 - H3;                 // hi parempi, low tasan   -> 1
+                        const gtWorse = gtHL - H1;               // hi parempi, low huonompi-> 2
+                        const eqBetter = H2 - H3;                // hi tasan,  low parempi  -> 1
+                        const eqEqual = (HH - H1) - eqBetter;    // hi tasan,  low tasan    -> 2
+                        const eqWorse = t2 - (HH - H1);          // hi tasan,  low huonompi -> 3
+                        const ltBetter = gtL - H2;               // hi huonompi, low parempi-> 2
+                        const ltEqual = t3 - (HH - H2);          // hi huonompi, low tasan  -> 3
+                        // Rivin "hero voittaa hi:n" (a2 kpl) jäännös
+                        const ltWorse = a2 - ltBetter - ltEqual;  // -> 4 (scoop)
+
+                        // Vastustajat ilman low'ta: hero vie matalan puoliskon
+                        // aina, joten osuus on 2 + hi-neljännekset.
+                        q0[idx] = gtBetter;
+                        q1[idx] = gtEqual + eqBetter;
+                        q2[idx] = gtWorse + eqEqual + ltBetter + (nNL - nlWin - nlTie);
+                        q3[idx] = eqWorse + ltEqual + nlTie;
+                        q4[idx] = ltWorse + nlWin;
                     } else {
                         // Herolla ei ole low'ta: hi-puolikas kaikkia vastaan +
                         // koko potti hi:llä niitä vastaan joilla ei myöskään
                         // ole low'ta (= kaikki miinus low-kädet)
-                        const geHL = histHL[v]
-                            - (histHL[ri + v] + histHL[rj + v] + histHL[rk + v] + histHL[rl + v])
-                            + (histHL[rij + v] + histHL[rik + v] + histHL[ril + v] + histHL[rjk + v] + histHL[rjl + v] + histHL[rkl + v])
-                            - (histHL[rijk + v] + histHL[rijl + v] + histHL[rikl + v] + histHL[rjkl + v]);
-                        const gtHL = histHL[w]
-                            - (histHL[ri + w] + histHL[rj + w] + histHL[rk + w] + histHL[rl + w])
-                            + (histHL[rij + w] + histHL[rik + w] + histHL[ril + w] + histHL[rjk + w] + histHL[rjl + w] + histHL[rkl + w])
-                            - (histHL[rijk + w] + histHL[rijl + w] + histHL[rikl + w] + histHL[rjkl + w]);
-                        const a2 = aOpp - geHL;  // low-kädet jotka hero voittaa hi:ssä
-                        const t2 = geHL - gtHL;  // low-kädet joiden kanssa hi tasan
                         h4 = 4 * a1 + 2 * t1 - 2 * a2 - t2;
                         l4 = 0;
                         // Ilman low'ta hero ei voi voittaa matalaa puoliskoa
                         hiW[idx] = a1; hiT[idx] = t1;
                         loW[idx] = 0; loT[idx] = 0;
+                        // Osuusjakauma marginaaleista: low-vastustajaa vastaan
+                        // hero saa korkeintaan hi-puolikkaan (0-2 neljännestä),
+                        // muita vastaan koko potin (0, 2 tai 4).
+                        q0[idx] = (aOpp - a2 - t2) + (nNL - nlWin - nlTie);
+                        q1[idx] = t2;
+                        q2[idx] = a2 + nlTie;
+                        q3[idx] = 0;
+                        q4[idx] = nlWin;
                     }
                     s = h4 + l4;
                     hi4[idx] = h4;
@@ -397,6 +556,18 @@ function solveBoardHiLo(board, buf) {
                     // jokainen voitettu puolisko on 2 neljännestä ja jaettu 1
                     if (l4 !== 2 * loW[idx] + loT[idx]) {
                         throw new Error(`lo4 ${l4} != 2*loW ${loW[idx]} + loT ${loT[idx]}`);
+                    }
+                    // Osuusjakauman on toistettava sekä vastustajien määrä
+                    // että jo laskettu osuus. Tämä on yhteisjakauman ainoa
+                    // aito tarkistus: pöydän summainvariantti ei näe sitä,
+                    // koska se katsoo vain kokonaisosuutta.
+                    const qn = q0[idx] + q1[idx] + q2[idx] + q3[idx] + q4[idx];
+                    if (qn !== N_OPP) {
+                        throw new Error(`osuusjakauman summa ${qn} != ${N_OPP}`);
+                    }
+                    const qs = q1[idx] + 2 * q2[idx] + 3 * q3[idx] + 4 * q4[idx];
+                    if (qs !== s) {
+                        throw new Error(`osuusjakauma ${qs} != osuus ${s} (g=${g})`);
                     }
                     boardSum += s;
                 }
@@ -462,8 +633,14 @@ if (parentPort) {
     const classOf = workerData.classOf;
     const buf = createHiloBuffers();
 
-    function accumulate(acc) {
-        const { rest, hi4, lo4, hiW, hiT, loW, loT } = buf;
+    function accumulate(acc, info) {
+        const { rest, hi4, lo4, hiW, hiT, loW, loT, handLoG, handVal, catOf } = buf;
+        const cat = acc.cat;
+        const q0 = buf.q[0], q1 = buf.q[1], q2 = buf.q[2], q3 = buf.q[3], q4 = buf.q[4];
+        // handLoG on kirjoitettu vain low-kelvollisilla pöydillä; muuten se
+        // sisältää edellisen pöydän arvot, joten sitä ei saa lukea.
+        const lowPossible = info.lowPossible;
+        const nutG = info.RL - 1;
         for (let l = 3; l < REST; l++) {
             const c4l = C4[l], g4 = G4[rest[l]];
             for (let k = 2; k < l; k++) {
@@ -480,27 +657,50 @@ if (parentPort) {
                         acc.hiTie[cls] += hiT[h];
                         acc.loWin[cls] += loW[h];
                         acc.loTie[cls] += loT[h];
+                        acc.q0[cls] += q0[h];
+                        acc.q1[cls] += q1[h];
+                        acc.q2[cls] += q2[h];
+                        acc.q3[cls] += q3[h];
+                        acc.q4[cls] += q4[h];
+                        // Käden oma korkea käsiluokka - ei riipu vastustajasta
+                        cat[catOf[handVal[h]]][cls]++;
+                        if (lowPossible) {
+                            const gg = handLoG[h];
+                            // Nämä eivät riipu vastustajasta lainkaan: kuinka
+                            // usein käsi ylipäätään tekee low'n ja kuinka usein
+                            // se on pöydän paras mahdollinen low.
+                            if (gg >= 0) {
+                                acc.lowMade[cls]++;
+                                if (gg === nutG) acc.nutLow[cls]++;
+                            }
+                        }
                     }
                 }
             }
         }
     }
 
+    // cat0..cat8 = käden oma korkea käsiluokka (hai .. värisuora)
+    const SERIES = ['hi', 'lo', 'hiWin', 'hiTie', 'loWin', 'loTie',
+        'q0', 'q1', 'q2', 'q3', 'q4', 'lowMade', 'nutLow',
+        'cat0', 'cat1', 'cat2', 'cat3', 'cat4', 'cat5', 'cat6', 'cat7', 'cat8'];
+
     parentPort.on('message', (task) => {
-        const acc = {
-            hi: new Float64Array(N_CLASSES), lo: new Float64Array(N_CLASSES),
-            hiWin: new Float64Array(N_CLASSES), hiTie: new Float64Array(N_CLASSES),
-            loWin: new Float64Array(N_CLASSES), loTie: new Float64Array(N_CLASSES)
-        };
+        const acc = {};
+        for (const s of SERIES) acc[s] = new Float64Array(N_CLASSES);
+        acc.cat = [0, 1, 2, 3, 4, 5, 6, 7, 8].map(i => acc['cat' + i]);
         const board = unrank5(task.startRank);
         for (let b = 0; b < task.count; b++) {
-            solveBoardHiLo(board, buf);
-            accumulate(acc);
+            const info = solveBoardHiLo(board, buf);
+            accumulate(acc, info);
             if (b + 1 < task.count && !nextCombination(board)) break;
         }
+        // cat on vain viitelista samoihin taulukoihin - se ei saa lähteä
+        // mukaan viestiin, koska taulukot siirretään erikseen
+        delete acc.cat;
         parentPort.postMessage(
             { chunk: task.chunk, boards: task.count, acc },
-            Object.values(acc).map(a => a.buffer)
+            SERIES.map(s => acc[s].buffer)
         );
     });
 }

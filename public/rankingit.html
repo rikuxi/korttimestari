@@ -117,6 +117,8 @@
                         <th class="col-hand">Käsi</th>
                         <th class="col-label">Nimi</th>
                         <th class="col-num col-equity">Equity %</th>
+                        <th class="col-num col-hilo" title="Osuus koko potista korkean puoliskon kautta; sisältää koko potin niiltä jaoilta joilla low'ta ei syntynyt">Hi %</th>
+                        <th class="col-num col-hilo" title="Osuus koko potista matalan puoliskon kautta; Hi % + Lo % = Equity %">Lo %</th>
                         <th class="col-num col-toppct" title="Kuinka suuri osa kaikista kombinaatioista on vähintään yhtä hyviä, tämä käsi mukaan lukien">Top-%</th>
                         <th class="col-num col-se">Keskivirhe</th>
                         <th class="col-num col-combos">Komboja</th>
@@ -176,8 +178,11 @@
         <p class="data-license-note">
             Heads-up-taulukot (Hold'em, Omaha, Omaha Hi/Lo) ovat eksakteja:
             kaikki pöydät ja vastustajakädet on käyty läpi. Omaha Hi/Lo:n
-            equity on keskimääräinen osuus jaetusta potista (hi- ja
-            low-puoliskot; CSV erittelee ne). Muut on laskettu hybridimenetelmällä
+            equity on keskimääräinen osuus jaetusta potista, ja Hi- ja
+            Lo-sarakkeet kertovat kummankin puoliskon osuuden siitä. Riviä
+            napauttamalla näkee myös kuinka usein puoliskot voitetaan, kuinka
+            usein potti scoopataan ja kuinka usein osuudeksi jää neljännes;
+            CSV sisältää kaikki luvut. Muut on laskettu hybridimenetelmällä
             (eksakti pöytien yli, Monte Carlo vastustajien korttien poiston
             yli) ja rivillä näkyy keskivirhe. Sija-alue suluissa kertoo, millä
             sijoilla käsi voi keskivirheiden puitteissa olla. Data on

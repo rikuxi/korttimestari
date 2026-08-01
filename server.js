@@ -355,7 +355,20 @@ app.get('/rankings/hand', lookupLimiter, (req, res) => {
             se: row.se,
             topPct: row.topPct,
             exact: table.exact,
-            handClasses: table.handCount
+            handClasses: table.handCount,
+            // Hi/Lo-taulukoissa mukana; muissa undefined putoaa pois JSONista
+            hiEquity: row.hiEquity,
+            loEquity: row.loEquity,
+            hiWin: row.hiWin,
+            hiTie: row.hiTie,
+            loWin: row.loWin,
+            loTie: row.loTie,
+            scoop: row.scoop,
+            partPot: row.partPot,
+            quarter: row.quarter,
+            scoopedOn: row.scoopedOn,
+            lowMade: row.lowMade,
+            nutLow: row.nutLow
         });
     }
     if (byPlayers.length === 0) {
