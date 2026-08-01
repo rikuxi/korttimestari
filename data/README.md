@@ -5,7 +5,7 @@
 Taulukot kattavat jokaisen käsiluokan jokaisella pelaajamäärällä:
 Hold'em (169 luokkaa, 2–10 pelaajaa), Omaha (16 432 luokkaa,
 2–9 pelaajaa), viisikorttinen Omaha (134 459 luokkaa, 2–9 pelaajaa)
-ja Omaha Hi/Lo 8-or-better (16 432 luokkaa, 2–3 pelaajaa) —
+ja Omaha Hi/Lo 8-or-better (16 432 luokkaa, 2–6 pelaajaa) —
 equity-arvoineen, keskivirheineen ja sijaepävarmuuksineen. Data on
 vapaasti käytettävissä [CC BY 4.0](LICENSE) -lisenssillä.
 
@@ -47,6 +47,9 @@ ihmiselle. Menetelmä ja tarkkuus ovat tiedoston `meta`-lohkossa.
 | `preflop-omaha5-9max-hybrid` | Omaha5 | 9 | hybridi | ± 0.0051 pp |
 | `preflop-omahahilo-2max-exact` | Omaha Hi/Lo | 2 | eksakti | **tarkka murtoluku** |
 | `preflop-omahahilo-3max-hybrid` | Omaha Hi/Lo | 3 | hybridi | ± 0.0039 pp |
+| `preflop-omahahilo-4max-hybrid` | Omaha Hi/Lo | 4 | hybridi | ± 0.0031 pp |
+| `preflop-omahahilo-5max-hybrid` | Omaha Hi/Lo | 5 | hybridi | ± 0.0030 pp |
+| `preflop-omahahilo-6max-hybrid` | Omaha Hi/Lo | 6 | hybridi | ± 0.0025 pp |
 
 **Eksakti** = kaikki C(52,5) = 2 598 960 pöytää ja kaikki vastustajakädet
 käydään läpi; tulos on tarkka murtoluku, ja `winCount`/`tieCount`/`denominator`
@@ -100,8 +103,8 @@ Satunnaista kättä vastaan luku on pieni, mutta se tekee näkyväksi sen
 oletuksen johon koko taulukko perustuu (ks. alla kohta järjestyksen
 rajoista).
 
-**Useamman pelaajan hi/lo-taulukoissa** (`preflop-omahahilo-3max-hybrid`)
-sarakkeet ovat samat kolmea poikkeusta lukuun ottamatta. Osuuksilla on
+**Useamman pelaajan hi/lo-taulukoissa** (`preflop-omahahilo-3max` …
+`-6max-hybrid`) sarakkeet ovat samat kolmea poikkeusta lukuun ottamatta. Osuuksilla on
 kullakin oma keskivirheensä: `se`/`seCmp` equitylle, `seHi` ja `seLo`
 puoliskoille. `threeQuarters` puuttuu, koska moninpelissä osuus ei rajoitu
 neljänneksiin — kolmisuuntainen jako tuottaa myös kuudesosia — ja tilalla
@@ -177,20 +180,32 @@ kuin ne oikeaa vastustajajoukkoa vastaan ansaitsisivat: pöydässä jossa
 muutkin pelaavat A2-kortteja low jaetaan ja osuus putoaa neljännekseen.
 
 `loTie`-sarake tekee tämän mitattavaksi: se kertoo kuinka usein matala
-puolisko jaetaan **tässä skenaariossa**. Kolmen pelaajan taulukko näyttää
-mihin suuntaan luku liikkuu: mediaani nousee 2,00 %:sta 2,57 %:iin ja
-kvartautuminen 1,13 %:sta 2,27 %:iin, listan ykkösellä AA32 (ds) `loTie`
-2,12 %:sta 4,03 %:iin. Kilpailu low'sta siis kasvaa pelaajamäärän mukana,
-mutta satunnaisia käsiä vastaan se kasvaa hitaasti — oikeassa pöydässä,
-jossa muutkin valikoivat A2-kortteja, nousu on jyrkempi.
+puolisko jaetaan **tässä skenaariossa**. Taulukot 2–6 pelaajalle näyttävät
+mihin suuntaan luvut liikkuvat (mediaanit):
 
-Huomaa ettei järjestys silti liiku siihen suuntaan mihin arvaisi:
-satunnaisia vastustajia vastaan matalaan nojaavat kädet **nousevat**
-kolmella pelaajalla (5432 nousee yli 8 000 sijaa), koska korkeasta
-puoliskosta kilpailee yksi pelaaja enemmän mutta matalasta ei juurikaan.
-Sama ilmiö toisin päin: paljas A2 näyttää listalla sitä vahvemmalta mitä
-enemmän pöydässä on pelaajia, vaikka juuri silloin todellinen
-kvartautumisriski on suurimmillaan.
+| Pelaajia | 2 | 3 | 4 | 5 | 6 |
+|---|---|---|---|---|---|
+| `loTie` | 2,00 % | 2,57 % | 2,77 % | 2,71 % | 2,52 % |
+| `quarter` | 1,13 % | 2,27 % | 2,69 % | 2,86 % | 2,87 % |
+| `scoop` | 34,41 % | 18,98 % | 12,69 % | 9,39 % | 7,36 % |
+| lo-puolen osuus equitystä | 24,8 % | 28,0 % | 29,3 % | 29,8 % | 30,0 % |
+
+Kvartautuminen siis lisääntyy pöydän täyttyessä, mutta satunnaisia käsiä
+vastaan se tasaantuu alle kolmeen prosenttiin — oikeassa pöydässä, jossa
+muutkin valikoivat A2-kortteja, nousu on jyrkempi. `loTie` kääntyy jopa
+laskuun viidestä pelaajasta alkaen: mitä useampi pelaaja on mukana, sitä
+useammin matala puolisko yksinkertaisesti hävitään sen sijaan että se
+jaettaisiin.
+
+Huomaa ettei järjestys liiku siihen suuntaan mihin arvaisi: satunnaisia
+vastustajia vastaan matalaan nojaavat kädet **nousevat** pöydän täyttyessä.
+5432 (r) on heads-upissa sijalla 14 534 mutta kuudella pelaajalla sijalla
+2 038, ja listan ykkösellä AA32 (ds) hi- ja lo-puolen osuudet ovat kuudella
+pelaajalla käytännössä yhtä suuret (19,45 % ja 19,63 %). Syy on se, että
+korkeasta puoliskosta kilpailee joka lisäpelaajan myötä yksi lisää, matalasta
+ei juurikaan. Sama ilmiö toisin päin: paljas A2 näyttää listalla sitä
+vahvemmalta mitä enemmän pöydässä on pelaajia, vaikka juuri silloin sen
+todellinen kvartautumisriski on suurimmillaan.
 
 ## Puuttuu
 
@@ -199,7 +214,7 @@ kvartautumisriski on suurimmillaan.
 | Hold'em | - (kaikki 2-10 laskettu) |
 | Omaha | - (kaikki 2-9 laskettu) |
 | Omaha5 | - (kaikki 2-9 laskettu) |
-| Omaha Hi/Lo | 4-9 (2-3 laskettu) |
+| Omaha Hi/Lo | 7-9 (2-6 laskettu) |
 
 Omaha5:lle ei ole eksaktia taulukkoa millään pelaajamäärällä (laskenta
 olisi liian raskas) - sivusto näyttää sille aina hybridiarvon

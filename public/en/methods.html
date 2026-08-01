@@ -69,7 +69,7 @@
                 <tr><td>Omaha</td><td>16,432</td><td>3–9</td><td>hybrid</td><td>± 0.0019–0.0046 pp</td></tr>
                 <tr><td>Omaha5</td><td>134,459</td><td>2–9</td><td>hybrid</td><td>± 0.0051–0.0125 pp</td></tr>
                 <tr><td>Omaha Hi/Lo</td><td>16,432</td><td>2</td><td>exact</td><td>exact fraction</td></tr>
-                <tr><td>Omaha Hi/Lo</td><td>16,432</td><td>3</td><td>hybrid</td><td>± 0.0039 pp</td></tr>
+                <tr><td>Omaha Hi/Lo</td><td>16,432</td><td>3–6</td><td>hybrid</td><td>± 0.0025–0.0039 pp</td></tr>
             </tbody>
         </table>
 
@@ -302,18 +302,26 @@
             table breaks out the hi and low half shares.
         </p>
         <p>
-            The three-handed Hi/Lo table was computed with the hybrid method:
+            The tables for 3–6 players were computed with the hybrid method:
             all 2,598,960 boards are enumerated and only the opponents' card
-            removal is sampled (32 configurations per board, 16 independent
-            replicates for the standard error). Shares accumulate as integers
+            removal is sampled (32–128 configurations per board, 16
+            independent replicates for the standard error). Shares accumulate as integers
             with the whole pot as 5040 units — the number is divisible by
             every tie size and the quotient is even, so splitting into halves
             is exact too. The method was verified by running the same
             pipeline with two players and comparing it against the exact
             heads-up table: across all 16,432 hand classes and eleven
             quantities the largest difference was 0.03 percentage points.
-            From four players up, all-in preflop against unknown opponents is
-            still computed by simulation.
+            From seven players up, all-in preflop against unknown opponents
+            is still computed by simulation.
+        </p>
+        <p>
+            The tables make visible that the low half <em>gains</em> value as
+            the table fills: every extra player competes for the high half,
+            fewer for the low. For the top-ranked AA32 (ds) the hi and lo
+            shares are 50.0 and 22.6 per cent heads-up but practically equal
+            six-handed (19.5 and 19.6). The ordering shows the same thing:
+            5432 (r) sits at rank 14,534 heads-up and at 2,038 six-handed.
         </p>
 
         <h2>Data and license</h2>
