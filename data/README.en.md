@@ -69,6 +69,22 @@ equity. The numerators `hiNumerator`/`loNumerator` are in integer
 quarter-pot units and `denominator` = combos × C(48,5) × C(43,4) × 4,
 so the result can be checked without recomputation.
 
+Alongside the shares there are **win frequencies**, which answer a
+different question: `hiWin`, `hiTie`, `loWin` and `loTie` (CSV:
+`hi_win_pct` and so on) say how often a half is taken outright or split.
+Share and frequency differ because winning the high half takes the whole
+pot only on a board with no qualifying low, and half the pot otherwise.
+Their denominator is `deals` = combos × C(48,5) × C(43,4), the number of
+(board, opponent) pairs — a quarter of the equity denominator, because the
+figure is a share of deals rather than of the pot. The integer counts are
+in `hiWinCount`, `hiTieCount`, `loWinCount` and `loTieCount`.
+
+`loTie` is the one to watch in hi/lo: it is the **quartering frequency**,
+how often the low half is split so that the share drops to a quarter of
+the pot. Against a random hand the figure is small, but it makes visible
+the assumption the whole table rests on (see the note on ranking limits
+below).
+
 ### Rank range `rankLow`/`rankHigh` (CSV: `rank_low`/`rank_high`)
 
 `rank` alone would present the ordering as more precise than it is: in
@@ -128,6 +144,22 @@ In Omaha the 16,432-hand list cannot be fully resolved at any
 attainable precision - the differences between consecutive hands are
 smaller than the standard error.
 
+### Omaha Hi/Lo: what the ordering measures
+
+The Hi/Lo table is exact, so a rank is not limited by precision. What
+limits the reading is the **scenario**: equity is computed against a
+random hand, and a random hand qualifies for low fairly rarely. Hands
+whose value rests on the low half alone - typically a bare A2 with no
+high support - therefore rank higher than they deserve against a
+realistic set of opponents: at a table where others also play A2 cards
+the low gets split and the share drops to a quarter.
+
+The `loTie` column makes this measurable: it says how often the low half
+is split **in this scenario**. Once the multiway tables exist, the same
+figure grows with the player count, and the gap between a hand's rank
+heads-up and 9-handed states directly how much of its value depends on
+nobody else competing for the low.
+
 ## Missing
 
 | Game | Missing player counts |
@@ -135,6 +167,7 @@ smaller than the standard error.
 | Hold'em | - (all of 2-10 computed) |
 | Omaha | - (all of 2-9 computed) |
 | Omaha5 | - (all of 2-9 computed) |
+| Omaha Hi/Lo | 3-9 (only heads-up computed) |
 
 Omaha5 has no exact table at any player count (the computation would
 be too heavy) - the site always shows it a hybrid value with its
@@ -146,6 +179,10 @@ standard error.
 # Exact heads-up
 node scripts/exactHoldem.js      # 9 s
 node scripts/exactOmaha.js       # 40 min
+node scripts/exactOmahaHilo.js   # 1 h 45 min
+
+# Brute-force verification of the exact Hi/Lo solver before a run
+node scripts/verifyExactHilo.js  # 10 s
 
 # Multiway, any player count
 node scripts/hybridHoldem.js --players 6 --configs 512 --replicates 16   # 3 min

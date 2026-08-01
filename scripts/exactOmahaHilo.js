@@ -56,16 +56,26 @@ function formatDuration(ms) {
 
 // --- Checkpoint --------------------------------------------------------
 
+// Kerättävät sarjat. Nimet ovat samat workerin acc-objektissa,
+// checkpointissa ja tilassa, joten uuden sarjan lisääminen ei vaadi
+// muutoksia kolmeen paikkaan.
+const SERIES = ['hi', 'lo', 'hiWin', 'hiTie', 'loWin', 'loTie'];
+
+// Checkpointin muoto. Kasvatetaan kun kerättävät sarjat muuttuvat, jotta
+// vanha checkpoint ei sekoitu hiljaa uusiin tuloksiin.
+const CHECKPOINT_FORMAT = 2;
+
 function saveCheckpoint(file, state) {
     const tmp = file + '.tmp';
-    fs.writeFileSync(tmp, JSON.stringify({
+    const out = {
+        format: CHECKPOINT_FORMAT,
         chunkSize: state.chunkSize,
         totalBoards: state.totalBoards,
         done: [...state.done],
-        boardsDone: state.boardsDone,
-        hi: Buffer.from(state.hi.buffer).toString('base64'),
-        lo: Buffer.from(state.lo.buffer).toString('base64')
-    }));
+        boardsDone: state.boardsDone
+    };
+    for (const s of SERIES) out[s] = Buffer.from(state[s].buffer).toString('base64');
+    fs.writeFileSync(tmp, JSON.stringify(out));
     fs.renameSync(tmp, file);
 }
 
@@ -73,16 +83,19 @@ function loadCheckpoint(file, chunkSize, totalBoards) {
     if (!fs.existsSync(file)) return null;
     try {
         const d = JSON.parse(fs.readFileSync(file, 'utf8'));
+        if (d.format !== CHECKPOINT_FORMAT) {
+            console.log('Checkpoint on vanhaa muotoa - ohitetaan.');
+            return null;
+        }
         if (d.chunkSize !== chunkSize || d.totalBoards !== totalBoards) {
             console.log('Checkpoint on eri parametreilla - ohitetaan.');
             return null;
         }
-        return {
-            done: new Set(d.done),
-            boardsDone: d.boardsDone,
-            hi: new Float64Array(new Uint8Array(Buffer.from(d.hi, 'base64')).buffer),
-            lo: new Float64Array(new Uint8Array(Buffer.from(d.lo, 'base64')).buffer)
-        };
+        const r = { done: new Set(d.done), boardsDone: d.boardsDone };
+        for (const s of SERIES) {
+            r[s] = new Float64Array(new Uint8Array(Buffer.from(d[s], 'base64')).buffer);
+        }
+        return r;
     } catch (e) {
         console.log('Checkpoint rikki - aloitetaan alusta.');
         return null;
@@ -122,9 +135,9 @@ async function runWorkers(opts, classOf, state, checkpointPath) {
                 worker.postMessage(chunks[next++]);
             };
             worker.on('message', (res) => {
-                for (let i = 0; i < N_CLASSES; i++) {
-                    state.hi[i] += res.hi[i];
-                    state.lo[i] += res.lo[i];
+                for (const s of SERIES) {
+                    const src = res.acc[s], dst = state[s];
+                    for (let i = 0; i < N_CLASSES; i++) dst[i] += src[i];
                 }
                 state.done.add(res.chunk);
                 state.boardsDone += res.boards;
@@ -181,6 +194,33 @@ function verifyTotals(classes, state) {
     console.log(`  painotettu keski-equity = 1/2 tasan -> ${meanOk ? 'OK' : 'VIRHE'}`);
     ok = meanOk && ok;
 
+    // Hi-taajuudet: jokaisessa järjestetyssä (hero, vastustaja) -parissa
+    // korkean puoliskon vie joko toinen yksin tai se jaetaan. Yksin
+    // voitetut parit lasketaan kerran (voittajan riviltä) ja jaetut
+    // kahdesti, joten 2*voitot + tasapelit = kaikki järjestetyt parit.
+    let hiWin = 0n, hiTie = 0n;
+    for (let i = 0; i < N_CLASSES; i++) {
+        hiWin += BigInt(state.hiWin[i]);
+        hiTie += BigInt(state.hiTie[i]);
+    }
+    const pairs = BigInt(N_BOARDS) * BigInt(N_HANDS_PER_BOARD) * BigInt(N_OPP);
+    const hiOk = 2n * hiWin + hiTie === pairs;
+    console.log(`  hi-taajuudet: 2 x ${hiWin} + ${hiTie} vs ${pairs} -> ${hiOk ? 'OK' : 'VIRHE'}`);
+    ok = hiOk && ok;
+
+    // Low-taajuudet ja low-osuus mittaavat samaa asiaa eri yksiköissä:
+    // voitettu puolisko on 2 neljännestä, jaettu 1. (Työläinen tarkistaa
+    // tämän jo käsikohtaisesti; tässä se varmistetaan vielä koostetusti,
+    // jolloin myös luokkiin kerääminen tulee katetuksi.)
+    let loNum = 0n, loFreq = 0n;
+    for (let i = 0; i < N_CLASSES; i++) {
+        loNum += BigInt(state.lo[i]);
+        loFreq += 2n * BigInt(state.loWin[i]) + BigInt(state.loTie[i]);
+    }
+    const loOk = loNum === loFreq;
+    console.log(`  low-osuus vs. low-taajuudet: ${loNum} vs ${loFreq} -> ${loOk ? 'OK' : 'VIRHE'}`);
+    ok = loOk && ok;
+
     return ok;
 }
 
@@ -190,6 +230,9 @@ function writeOutputs(classes, state, dataDir, elapsedMs) {
     const hands = classes.map((c, i) => {
         // Nimittäjä neljännespotin yksiköissä: 4 per (pöytä, vastustaja)
         const denom = c.combos * BOARDS_PER_HAND * N_OPP * 4;
+        // Taajuuksien nimittäjä on (pöytä, vastustaja) -parien määrä eli
+        // neljäsosa siitä - luku on osuus jaoista, ei potista
+        const deals = c.combos * BOARDS_PER_HAND * N_OPP;
         const hi = state.hi[i], lo = state.lo[i];
         return {
             key: c.key,
@@ -204,7 +247,19 @@ function writeOutputs(classes, state, dataDir, elapsedMs) {
             denominator: denom,
             equity: 100 * (hi + lo) / denom,
             hiEquity: 100 * hi / denom,
-            loEquity: 100 * lo / denom
+            loEquity: 100 * lo / denom,
+            // Taajuudet: kuinka usein puolisko voitetaan yksin tai jaetaan.
+            // Eri suure kuin osuus - hi-voitto tuo koko potin vain kun
+            // kumpikaan ei tehnyt low'ta.
+            hiWin: 100 * state.hiWin[i] / deals,
+            hiTie: 100 * state.hiTie[i] / deals,
+            loWin: 100 * state.loWin[i] / deals,
+            loTie: 100 * state.loTie[i] / deals,
+            hiWinCount: state.hiWin[i],
+            hiTieCount: state.hiTie[i],
+            loWinCount: state.loWin[i],
+            loTieCount: state.loTie[i],
+            deals
         };
     });
     hands.sort((a, b) => b.equity - a.equity || (a.key < b.key ? -1 : 1));
@@ -223,6 +278,16 @@ function writeOutputs(classes, state, dataDir, elapsedMs) {
             opponentHandsPerBoard: N_OPP,
             handClasses: hands.length,
             numeratorUnit: 'neljännespotti (1/4): denominator = combos * C(48,5) * C(43,4) * 4',
+            frequencyUnit: 'osuus jaoista: deals = combos * C(48,5) * C(43,4)',
+            columns: {
+                equity: 'keskimääräinen osuus potista',
+                hiEquity: 'osuus potista korkean puoliskon kautta (sisältää koko potin kun low\'ta ei syntynyt)',
+                loEquity: 'osuus potista matalan puoliskon kautta; hiEquity + loEquity = equity',
+                hiWin: 'kuinka usein korkea puolisko voitetaan yksin',
+                hiTie: 'kuinka usein korkea puolisko jaetaan',
+                loWin: 'kuinka usein matala puolisko voitetaan yksin',
+                loTie: 'kuinka usein matala puolisko jaetaan (kvartautuminen)'
+            },
             computeSeconds: Math.round(elapsedMs / 1000),
             generatedAt: new Date().toISOString(),
             script: 'scripts/exactOmahaHilo.js'
@@ -236,9 +301,18 @@ function writeOutputs(classes, state, dataDir, elapsedMs) {
             equity: round(h.equity, 6),
             hiEquity: round(h.hiEquity, 6),
             loEquity: round(h.loEquity, 6),
+            hiWin: round(h.hiWin, 6),
+            hiTie: round(h.hiTie, 6),
+            loWin: round(h.loWin, 6),
+            loTie: round(h.loTie, 6),
             hiNumerator: h.hiNumerator,
             loNumerator: h.loNumerator,
             denominator: h.denominator,
+            hiWinCount: h.hiWinCount,
+            hiTieCount: h.hiTieCount,
+            loWinCount: h.loWinCount,
+            loTieCount: h.loTieCount,
+            deals: h.deals,
             rankLow: h.rankLow,
             rankHigh: h.rankHigh
         }))
@@ -248,11 +322,17 @@ function writeOutputs(classes, state, dataDir, elapsedMs) {
     fs.writeFileSync(jsonPath, JSON.stringify(output, null, 2) + '\n');
     console.log(`Kirjoitettu: ${jsonPath}`);
 
-    const lines = ['rank,hand,label,notation,combos,equity_pct,hi_equity_pct,lo_equity_pct,hi_numerator,lo_numerator,denominator,rank_low,rank_high'];
+    const lines = ['rank,hand,label,notation,combos,equity_pct,hi_equity_pct,lo_equity_pct,' +
+        'hi_win_pct,hi_tie_pct,lo_win_pct,lo_tie_pct,' +
+        'hi_numerator,lo_numerator,denominator,' +
+        'hi_win_count,hi_tie_count,lo_win_count,lo_tie_count,deals,rank_low,rank_high'];
     for (const h of hands) {
         lines.push([h.rank, h.key, h.label, h.notation, h.combos,
             round(h.equity, 6), round(h.hiEquity, 6), round(h.loEquity, 6),
-            h.hiNumerator, h.loNumerator, h.denominator, h.rankLow, h.rankHigh].join(','));
+            round(h.hiWin, 6), round(h.hiTie, 6), round(h.loWin, 6), round(h.loTie, 6),
+            h.hiNumerator, h.loNumerator, h.denominator,
+            h.hiWinCount, h.hiTieCount, h.loWinCount, h.loTieCount, h.deals,
+            h.rankLow, h.rankHigh].join(','));
     }
     const csvPath = path.join(dataDir, 'preflop-omahahilo-2max-exact.csv');
     fs.writeFileSync(csvPath, lines.join('\n') + '\n');
@@ -285,10 +365,11 @@ async function main() {
         chunkSize: opts.chunk,
         totalBoards,
         done: restored ? restored.done : new Set(),
-        boardsDone: restored ? restored.boardsDone : 0,
-        hi: restored ? restored.hi : new Float64Array(N_CLASSES),
-        lo: restored ? restored.lo : new Float64Array(N_CLASSES)
+        boardsDone: restored ? restored.boardsDone : 0
     };
+    for (const s of SERIES) {
+        state[s] = restored ? restored[s] : new Float64Array(N_CLASSES);
+    }
     if (restored) {
         console.log(`Checkpointista jatketaan: ${state.boardsDone.toLocaleString('fi-FI')} pöytää valmiina.`);
     }

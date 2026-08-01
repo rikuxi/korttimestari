@@ -157,6 +157,15 @@ function lookup(gameType, players, hand) {
 
     return {
         equity: row.equity,
+        // Hi/Lo-taulukoissa mukana: potin puoliskojen osuudet ja
+        // voitto-/tasapelitaajuudet. Muissa nämä ovat undefined ja
+        // putoavat pois JSON-vastauksesta.
+        hiEquity: row.hiEquity,
+        loEquity: row.loEquity,
+        hiWin: row.hiWin,
+        hiTie: row.hiTie,
+        loWin: row.loWin,
+        loTie: row.loTie,
         exact: table.exact,
         // Eksaktilla taulukolla virhettä ei ole; hybridillä se on rivikohtainen;
         // Monte Carlo -taulukoilla se johdetaan simulaatiomäärästä

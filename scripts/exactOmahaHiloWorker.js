@@ -75,6 +75,14 @@ function createHiloBuffers() {
     buf.histL = new Int32Array(N_ROWS * LSTRIDE);      // low-hyvyydet
     buf.hi4 = new Float64Array(N_HANDS);         // hi-osuus, 1/4-potin yksiköissä
     buf.lo4 = new Float64Array(N_HANDS);         // low-osuus, 1/4-potin yksiköissä
+    // Taajuudet: montako vastustajaa vastaan puolisko voitetaan yksin tai
+    // jaetaan. Nämä ovat eri suure kuin osuus - hi-voitto tuo koko potin
+    // vain low-kelvottomalla pöydällä. Luvut saadaan samoista I-E-termeistä
+    // kuin osuudetkin, joten ne eivät maksa mitään lisää.
+    buf.hiW = new Float64Array(N_HANDS);
+    buf.hiT = new Float64Array(N_HANDS);
+    buf.loW = new Float64Array(N_HANDS);
+    buf.loT = new Float64Array(N_HANDS);
     return buf;
 }
 
@@ -93,7 +101,7 @@ const BOARD_SUM = 2 * N_HANDS * N_OPP;
 function solveBoardHiLo(board, buf) {
     prepareBoard(board, buf);
     const R = buf.R;
-    const { rest, pairRank, handVal, pairLoG, handLoG, loMasks, hi4, lo4 } = buf;
+    const { rest, handVal, pairLoG, handLoG, loMasks, hi4, lo4, hiW, hiT, loW, loT } = buf;
 
     // --- Pöydän low-kolmikot: 10 kolmikkoa, kelvollisissa 3 eri low-arvoa ---
     const bt = [];
@@ -319,6 +327,8 @@ function solveBoardHiLo(board, buf) {
                         const s = 4 * a1 + 2 * t1;
                         hi4[idx] = s;
                         lo4[idx] = 0;
+                        hiW[idx] = a1; hiT[idx] = t1;
+                        loW[idx] = 0; loT[idx] = 0;
                         boardSum += s;
                         continue;
                     }
@@ -352,10 +362,14 @@ function solveBoardHiLo(board, buf) {
                             - (histL[si + gL] + histL[sj + gL] + histL[sk + gL] + histL[sl + gL])
                             + (histL[sij + gL] + histL[sik + gL] + histL[sil + gL] + histL[sjk + gL] + histL[sjl + gL] + histL[skl + gL])
                             - (histL[sijk + gL] + histL[sijl + gL] + histL[sikl + gL] + histL[sjkl + gL]);
-                        const a3 = aOpp - geL;   // hero voittaa low'n
+                        const a3 = aOpp - geL;   // hero voittaa low'n low-käsiä vastaan
                         const t3 = geL - gtL;    // low tasan
                         h4 = 2 * a1 + t1;
+                        // Vastustaja jolla ei ole low'ta häviää low-puoliskon
+                        // automaattisesti, joten hän kuuluu voitettuihin
                         l4 = 2 * a3 + t3 + 2 * (N_OPP - aOpp);
+                        hiW[idx] = a1; hiT[idx] = t1;
+                        loW[idx] = a3 + (N_OPP - aOpp); loT[idx] = t3;
                     } else {
                         // Herolla ei ole low'ta: hi-puolikas kaikkia vastaan +
                         // koko potti hi:llä niitä vastaan joilla ei myöskään
@@ -372,10 +386,18 @@ function solveBoardHiLo(board, buf) {
                         const t2 = geHL - gtHL;  // low-kädet joiden kanssa hi tasan
                         h4 = 4 * a1 + 2 * t1 - 2 * a2 - t2;
                         l4 = 0;
+                        // Ilman low'ta hero ei voi voittaa matalaa puoliskoa
+                        hiW[idx] = a1; hiT[idx] = t1;
+                        loW[idx] = 0; loT[idx] = 0;
                     }
                     s = h4 + l4;
                     hi4[idx] = h4;
                     lo4[idx] = l4;
+                    // Low-osuuden ja -taajuuksien on vastattava toisiaan:
+                    // jokainen voitettu puolisko on 2 neljännestä ja jaettu 1
+                    if (l4 !== 2 * loW[idx] + loT[idx]) {
+                        throw new Error(`lo4 ${l4} != 2*loW ${loW[idx]} + loT ${loT[idx]}`);
+                    }
                     boardSum += s;
                 }
             }
@@ -440,8 +462,8 @@ if (parentPort) {
     const classOf = workerData.classOf;
     const buf = createHiloBuffers();
 
-    function accumulate(accHi, accLo) {
-        const { rest, hi4, lo4 } = buf;
+    function accumulate(acc) {
+        const { rest, hi4, lo4, hiW, hiT, loW, loT } = buf;
         for (let l = 3; l < REST; l++) {
             const c4l = C4[l], g4 = G4[rest[l]];
             for (let k = 2; k < l; k++) {
@@ -451,8 +473,13 @@ if (parentPort) {
                     const base = c4l + c3k + c2j;
                     for (let i = 0; i < j; i++) {
                         const cls = classOf[g2 + rest[i]];
-                        accHi[cls] += hi4[base + i];
-                        accLo[cls] += lo4[base + i];
+                        const h = base + i;
+                        acc.hi[cls] += hi4[h];
+                        acc.lo[cls] += lo4[h];
+                        acc.hiWin[cls] += hiW[h];
+                        acc.hiTie[cls] += hiT[h];
+                        acc.loWin[cls] += loW[h];
+                        acc.loTie[cls] += loT[h];
                     }
                 }
             }
@@ -460,17 +487,20 @@ if (parentPort) {
     }
 
     parentPort.on('message', (task) => {
-        const accHi = new Float64Array(N_CLASSES);
-        const accLo = new Float64Array(N_CLASSES);
+        const acc = {
+            hi: new Float64Array(N_CLASSES), lo: new Float64Array(N_CLASSES),
+            hiWin: new Float64Array(N_CLASSES), hiTie: new Float64Array(N_CLASSES),
+            loWin: new Float64Array(N_CLASSES), loTie: new Float64Array(N_CLASSES)
+        };
         const board = unrank5(task.startRank);
         for (let b = 0; b < task.count; b++) {
             solveBoardHiLo(board, buf);
-            accumulate(accHi, accLo);
+            accumulate(acc);
             if (b + 1 < task.count && !nextCombination(board)) break;
         }
         parentPort.postMessage(
-            { chunk: task.chunk, boards: task.count, hi: accHi, lo: accLo },
-            [accHi.buffer, accLo.buffer]
+            { chunk: task.chunk, boards: task.count, acc },
+            Object.values(acc).map(a => a.buffer)
         );
     });
 }

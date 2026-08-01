@@ -71,6 +71,22 @@ test('validi omahahilo-simulaatio palauttaa 200 ja hi/lo-erittelyn', async () =>
     }
 });
 
+test('/preflop palauttaa Hi/Lo:n puoliskoerittelyn ja taajuudet', async () => {
+    const res = await fetch(`${baseUrl}/preflop?gameType=omahahilo&players=2&hand=As,3s,Ah,2h`);
+    if (res.status === 404) return;   // taulukkoa ei ole tässä ympäristössä
+    assert.strictEqual(res.status, 200);
+    const d = await res.json();
+    assert.strictEqual(d.exact, true);
+    // Osuudet summautuvat equityyn
+    assert.ok(Math.abs(d.hiEquity + d.loEquity - d.equity) < 1e-6);
+    // Taajuudet ovat eri suure kuin osuudet eivätkä ylitä sataa
+    for (const k of ['hiWin', 'hiTie', 'loWin', 'loTie']) {
+        assert.ok(typeof d[k] === 'number' && d[k] >= 0 && d[k] <= 100, `${k}: ${d[k]}`);
+    }
+    // A2-kädellä low syntyy usein, joten low voitetaan toisinaan
+    assert.ok(d.loWin > 0);
+});
+
 test('tuplakortti hylätään (400)', async () => {
     const res = await post(validBody({
         playerHandsData: [

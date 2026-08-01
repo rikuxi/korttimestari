@@ -68,6 +68,22 @@ equity. Osoittajat `hiNumerator`/`loNumerator` ovat neljännespotin
 kokonaislukuyksiköissä ja `denominator` = kombot × C(48,5) × C(43,4) × 4,
 joten tulos on tarkistettavissa ilman uudelleenlaskentaa.
 
+Osuuksien rinnalla on **voittotaajuudet**, jotka vastaavat eri
+kysymykseen: `hiWin`, `hiTie`, `loWin` ja `loTie` (CSV:
+`hi_win_pct` jne.) kertovat kuinka usein puolisko voitetaan yksin tai
+jaetaan. Osuus ja taajuus eroavat, koska korkean puoliskon voittaminen
+tuo koko potin vain low-kelvottomalla pöydällä ja muuten puolikkaan.
+Näiden nimittäjä on `deals` = kombot × C(48,5) × C(43,4) eli
+(pöytä, vastustaja) -parien määrä — neljäsosa equityn nimittäjästä,
+koska luku on osuus jaoista eikä potista. Kokonaislukukappalemäärät ovat
+sarakkeissa `hiWinCount`, `hiTieCount`, `loWinCount` ja `loTieCount`.
+
+`loTie` on hi/lo:n kannalta erityisen kiinnostava: se on
+**kvartautumistaajuus** eli kuinka usein matala puolisko jaetaan, jolloin
+osuudeksi jää neljännes potista. Satunnaista kättä vastaan luku on pieni,
+mutta se tekee näkyväksi sen oletuksen johon koko taulukko perustuu (ks.
+alla kohta järjestyksen rajoista).
+
 ### Sija-alue `rankLow`/`rankHigh` (CSV: `rank_low`/`rank_high`)
 
 `rank` yksinään esittäisi järjestyksen tarkempana kuin se on: hybridissä
@@ -121,6 +137,22 @@ merkki merkiltä. Huomaa ettei tämä ole sama kuin ProPokerToolsin
 Omahassa 16 432 käden lista ei ratkea kokonaan millään saavutettavalla
 tarkkuudella - peräkkäisten erot ovat pienempiä kuin keskivirhe.
 
+### Omaha Hi/Lo: mitä järjestys mittaa
+
+Hi/Lo:n taulukko on eksakti, joten sija ei ole tarkkuudesta kiinni. Sen
+sijaan **skenaario** rajaa tulkintaa: equity lasketaan satunnaista kättä
+vastaan, ja satunnainen käsi tekee kelvollisen low'n verrattain harvoin.
+Kädet joiden arvo nojaa pelkästään matalaan puoliskoon - tyypillisesti
+paljas A2 ilman korkeaa tukea - saavat siksi listalla korkeamman sijan
+kuin ne oikeaa vastustajajoukkoa vastaan ansaitsisivat: pöydässä jossa
+muutkin pelaavat A2-kortteja low jaetaan ja osuus putoaa neljännekseen.
+
+`loTie`-sarake tekee tämän mitattavaksi: se kertoo kuinka usein matala
+puolisko jaetaan **tässä skenaariossa**. Kun moninpelitaulukot valmistuvat,
+sama luku kasvaa pelaajamäärän mukana, ja ero yksittäisen käden sijassa
+heads-upin ja 9-maxin välillä kertoo suoraan kuinka paljon käden arvo
+riippuu siitä, ettei kukaan muu kilpaile low'sta.
+
 ## Puuttuu
 
 | Peli | Puuttuvat pelaajamäärät |
@@ -128,6 +160,7 @@ tarkkuudella - peräkkäisten erot ovat pienempiä kuin keskivirhe.
 | Hold'em | - (kaikki 2-10 laskettu) |
 | Omaha | - (kaikki 2-9 laskettu) |
 | Omaha5 | - (kaikki 2-9 laskettu) |
+| Omaha Hi/Lo | 3-9 (vain heads-up laskettu) |
 
 Omaha5:lle ei ole eksaktia taulukkoa millään pelaajamäärällä (laskenta
 olisi liian raskas) - sivusto näyttää sille aina hybridiarvon
@@ -139,6 +172,10 @@ keskivirheineen.
 # Eksakti heads-up
 node scripts/exactHoldem.js      # 9 s
 node scripts/exactOmaha.js       # 40 min
+node scripts/exactOmahaHilo.js   # 1 h 45 min
+
+# Eksaktin Hi/Lo-ratkaisijan varmennus raakalaskennalla ennen ajoa
+node scripts/verifyExactHilo.js  # 10 s
 
 # Moninpeli, mikä tahansa pelaajamäärä
 node scripts/hybridHoldem.js --players 6 --configs 512 --replicates 16   # 3 min
