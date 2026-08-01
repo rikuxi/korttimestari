@@ -153,6 +153,128 @@
             eivät yleensä kerro menetelmäänsä; tämän sivuston jokainen luku
             on jäljitettävissä menetelmään ja virherajaan.
         </p>
+        <p>
+            Omaha Hi/Lo:n rankingiin liittyy lisäksi menetelmästä johtuva
+            varaus. Equity lasketaan satunnaista kättä vastaan, ja
+            satunnainen käsi tekee kelvollisen low'n verrattain harvoin.
+            Siksi kädet joiden arvo nojaa pelkkään matalaan puoliskoon —
+            tyypillisesti paljas A2 ilman korkeaa tukea — saavat listalla
+            korkeamman sijan kuin ne oikeaa vastustajajoukkoa vastaan
+            ansaitsisivat: pöydässä jossa muutkin pelaavat A2-kortteja low
+            jaetaan ja osuus putoaa neljännekseen. Luvut ovat tarkkoja
+            siihen kysymykseen johon ne vastaavat, mutta se kysymys ei ole
+            sama kuin “kuinka hyvin tämä käsi pelaa oikeassa pelissä”.
+        </p>
+
+        <h2>Mitä luvut tarkoittavat</h2>
+        <p>
+            Simulaattori näyttää jokaisen pelaajan kohdalla samat rivit
+            pelimuodosta riippumatta. Kaksi ylintä ovat taajuuksia eli
+            kertovat kuinka usein jotain tapahtuu, equity on keskiarvo, ja
+            kaksi alinta kuvaavat laskennan tarkkuutta.
+        </p>
+
+        <table>
+            <thead>
+                <tr><th>Rivi</th><th>Mitä se kertoo</th></tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td>Voitto / Scoop</td>
+                    <td>Kuinka usein pelaaja vie koko potin yksin. Hi/Lo-tilassa
+                        rivin nimi on Scoop.</td>
+                </tr>
+                <tr>
+                    <td>Tasan / Osapotti</td>
+                    <td>Kuinka usein pelaaja saa osan potista muttei kaikkea.
+                        Hold'emissa ja Omahassa se tarkoittaa tasapeliä, ja rivin
+                        nimi on Tasan. Hi/Lo:ssa potti jakautuu useimmiten ilman
+                        tasapeliä, kun eri pelaaja voittaa korkean ja eri matalan
+                        puoliskon — siksi rivin nimi on siellä Osapotti.</td>
+                </tr>
+                <tr>
+                    <td>Equity</td>
+                    <td>Keskimääräinen osuus potista: koko potti niiltä jaoilta
+                        jotka pelaaja vie yksin, plus jaetut osuudet omilla
+                        painoillaan. Tämä on tärkein luku.</td>
+                </tr>
+                <tr>
+                    <td>Virhe</td>
+                    <td>Simulaation keskivirhe eli kuinka paljon equity heiluisi,
+                        jos sama ajo toistettaisiin. Pienenee kierrosmäärän
+                        neliöjuuressa: nelinkertainen ajo puolittaa virheen.</td>
+                </tr>
+                <tr>
+                    <td>Tarkka</td>
+                    <td>Equity ilman arviointivirhettä. Ilmestyy simulaation
+                        rinnalle, kun kaikkien pelaajien kortit ovat tiedossa ja
+                        jäljellä olevat pöydät ehditään käydä läpi tyhjentävästi —
+                        tai kun vastaus löytyy esilasketusta preflop-taulukosta.</td>
+                </tr>
+            </tbody>
+        </table>
+
+        <p>
+            Equity muodostuu kahdesta ylimmästä rivistä painottamalla. Käsi
+            joka vie koko potin 25,49 %:ssa jaoista ja saa puolet
+            20,29 %:ssa, saa equityksi
+            1&nbsp;×&nbsp;25,49&nbsp;% + 0,5&nbsp;×&nbsp;20,29&nbsp;% =
+            35,64&nbsp;%.
+        </p>
+
+        <h3>Equity ja panostuspäätös</h3>
+        <p>
+            Equity kannattaa suhteuttaa siihen, kuinka suuren osan
+            lopullisesta potista joutuu itse maksamaan:
+            <strong>EV = equity × lopullinen potti − oma panos</strong>.
+            Panostus on siis kannattava, kun
+            <strong>equity &gt; oma panos / lopullinen potti</strong>.
+        </p>
+        <p>
+            Kun molemmat pelaajat ovat all-in samalla summalla eikä potissa
+            ole muuta rahaa, oma osuus lopullisesta potista on tasan puolet
+            — silloin ja vain silloin raja kulkee 50 %:ssa. Jos potissa on
+            jo 50 € kuollutta rahaa ja molemmat laittavat 100 €, potti on
+            250 € ja raja laskee 40 %:iin: 45 %:n equity on jo selvästi
+            kannattava. Rake siirtää rajaa toiseen suuntaan — 5 %:n rakella
+            se nousee noin 52,6 %:iin, jolloin 52 %:n equity on lievästi
+            tappiollinen.
+        </p>
+        <p>
+            Luvut ovat all-in-equityjä: ne olettavat, että kaikki kortit
+            jaetaan ilman lisäpanostusta. Jos peliä on vielä jäljellä,
+            equity ei yksin ratkaise, vaan mukaan tulevat positio,
+            pelattavuus ja se kumman on vaikeampi pelata loput kierrokset.
+        </p>
+
+        <h3>Hi/Lo:n kolme lisäriviä</h3>
+        <p>
+            Hi/Lo:ssa potin puoliskoista näytetään <strong>kaksi eri
+            suuretta</strong>, ja ne on helppo sekoittaa keskenään.
+            <em>Osuus hi/lo</em> kertoo, kuinka suuren osan koko potista
+            pelaaja saa kummankin puoliskon kautta; hi-osuus sisältää koko
+            potin niiltä jaoilta joilla low'ta ei syntynyt, joten
+            hi + lo = equity. <em>Voitto hi/lo</em> ja <em>Tasan hi/lo</em>
+            ovat sen sijaan taajuuksia: kuinka usein pelaaja voittaa
+            puoliskon yksin tai jakaa sen. Kaikilla kolmella rivillä
+            ensimmäinen luku on hi ja toinen lo.
+        </p>
+        <p>
+            Suureet eroavat, koska hi-puoliskon voittaminen on eriarvoista
+            eri pöydillä: low-kelvottomalla pöydällä se tuo koko potin,
+            low-pöydällä vain puolikkaan. Kädellä JQK2 yhtä satunnaista
+            kättä vastaan hi-voiton taajuus on 45,50 % mutta hi-osuus
+            potista 35,64 %, koska 54,01 % pöydistä mahdollistaa low'n.
+            Muut laskurit näyttävät yleensä taajuudet; equity (EV) on
+            molemmissa sama.
+        </p>
+        <p>
+            Rivi kertoo myös, onko käden arvo korkea- vai
+            matalapainotteinen. Sillä on merkitystä useamman pelaajan
+            pöydässä: pelkkään low'hun nojaava arvo puolittuu heti, jos
+            joku toinenkin tekee saman low'n, kun taas korkeaan käteen
+            nojaava arvo ei kärsi siitä lainkaan.
+        </p>
 
         <h2>Omaha Hi/Lo simulaattorissa</h2>
         <p>
@@ -164,34 +286,9 @@
             käytetään tasan kaksi käsikorttia ja kolme pöytäkorttia, ja ne
             saavat olla eri kortit. Jos kukaan ei tee kelvollista low'ta
             (pöydässä on oltava kolme eri arvoa korkeintaan 8), korkea käsi
-            vie koko potin.
-        </p>
-        <p>
-            Tuloksissa <strong>equity</strong> on pelaajan keskimääräinen
-            osuus potista, <strong>scoop</strong> on koko potin vieminen
-            yksin ja <strong>osapotti</strong> mikä tahansa jaettu osuus
-            (esimerkiksi neljännes, kun low menee tasan). Tarkka enumerointi
-            toimii Hi/Lo:ssa samoin kuin muissa pelimuodoissa, kun kaikkien
-            pelaajien kortit ovat tiedossa.
-        </p>
-        <p>
-            Puoliskoista näytetään <strong>kaksi eri suuretta</strong>, ja
-            ne on helppo sekoittaa keskenään. <em>Osuus hi/lo</em> kertoo,
-            kuinka suuren osan koko potista pelaaja saa kummankin puoliskon
-            kautta; hi-osuus sisältää koko potin niiltä kierroksilta joilla
-            low'ta ei syntynyt, joten hi + lo = equity. <em>Voitto hi/lo</em>
-            ja <em>Tasan hi/lo</em> ovat sen sijaan taajuuksia: kuinka usein
-            pelaaja voittaa puoliskon yksin tai jakaa sen. Kaikilla kolmella
-            rivillä ensimmäinen luku on hi ja toinen lo.
-        </p>
-        <p>
-            Suureet eroavat, koska hi-puoliskon voittaminen on eriarvoista
-            eri pöydillä: low-kelvottomalla pöydällä se tuo koko potin,
-            low-pöydällä vain puolikkaan. Esimerkiksi kädellä JQK2 yhtä
-            satunnaista kättä vastaan hi-voiton taajuus on 45,50 % mutta
-            hi-osuus potista 35,64 %, koska 54,01 % pöydistä mahdollistaa
-            low'n. Muut laskurit näyttävät yleensä taajuudet; equity (EV) on
-            molemmissa sama.
+            vie koko potin. Tarkka enumerointi toimii Hi/Lo:ssa samoin kuin
+            muissa pelimuodoissa, kun kaikkien pelaajien kortit ovat
+            tiedossa.
         </p>
         <p>
             Hi/Lo:n heads-up-preflop-taulukko on laskettu eksaktisti samalla

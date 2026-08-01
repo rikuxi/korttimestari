@@ -2431,6 +2431,12 @@ button.range-jump-button {
     margin: 24px 0 8px;
 }
 
+.prose h3 {
+    color: var(--heading);
+    font-size: 16px;
+    margin: 18px 0 6px;
+}
+
 .prose p {
     margin-bottom: 12px;
 }
@@ -2448,6 +2454,16 @@ button.range-jump-button {
     font-size: 14px;
     margin: 12px 0 16px;
     width: 100%;
+}
+
+/* Kapealla näytöllä leveä taulukko vierii omassa laatikossaan. Ilman tätä
+   se työntää koko sivun vaakavieritykseen: suomenkielinen menetelmätaulukko
+   vaatii ~411 px, eikä 390 px:n puhelimeen mahdu. */
+@media (max-width: 767px) {
+    .prose table {
+        display: block;
+        overflow-x: auto;
+    }
 }
 
 .prose th,

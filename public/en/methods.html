@@ -156,6 +156,127 @@
             number on this site is traceable to a method and an error
             bound.
         </p>
+        <p>
+            The Omaha Hi/Lo ranking carries one further caveat that comes
+            from the method itself. Equity is computed against a random
+            hand, and a random hand qualifies for low fairly rarely. Hands
+            whose value rests on the low half alone — typically a bare A2
+            with no high support — therefore rank higher on the list than
+            they deserve against a realistic range of opponents: at a table
+            where others also play A2 cards the low gets split and the share
+            drops to a quarter. The numbers are exact for the question they
+            answer, but that question is not the same as “how well does this
+            hand play in a real game”.
+        </p>
+
+        <h2>What the numbers mean</h2>
+        <p>
+            The simulator shows the same rows for every player regardless of
+            game type. The top two are frequencies — how often something
+            happens — equity is an average, and the bottom two describe how
+            precise the computation is.
+        </p>
+
+        <table>
+            <thead>
+                <tr><th>Row</th><th>What it tells you</th></tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td>Win / Scoop</td>
+                    <td>How often the player takes the whole pot alone. In Hi/Lo
+                        the row is labelled Scoop.</td>
+                </tr>
+                <tr>
+                    <td>Tie / Part-pot</td>
+                    <td>How often the player gets a portion of the pot but not
+                        all of it. In Hold'em and Omaha that means a tie, and the
+                        row is labelled Tie. In Hi/Lo the pot usually splits
+                        without any tie, because one player wins the high half and
+                        another the low half — hence the label Part-pot there.</td>
+                </tr>
+                <tr>
+                    <td>Equity</td>
+                    <td>The average share of the pot: the whole pot from deals the
+                        player takes alone, plus shared portions weighted by their
+                        size. This is the number that matters most.</td>
+                </tr>
+                <tr>
+                    <td>SE</td>
+                    <td>The standard error of the simulation: how much the equity
+                        would move if the same run were repeated. It shrinks with
+                        the square root of the round count — four times the rounds
+                        halves the error.</td>
+                </tr>
+                <tr>
+                    <td>Exact</td>
+                    <td>Equity with no estimation error. It appears alongside the
+                        simulation when every player's cards are known and the
+                        remaining boards can be enumerated in reasonable time — or
+                        when the answer is in a precomputed preflop table.</td>
+                </tr>
+            </tbody>
+        </table>
+
+        <p>
+            Equity is built from the top two rows by weighting. A hand that
+            takes the whole pot in 25.49 % of deals and half the pot in
+            20.29 % has an equity of
+            1&nbsp;×&nbsp;25.49&nbsp;% + 0.5&nbsp;×&nbsp;20.29&nbsp;% =
+            35.64&nbsp;%.
+        </p>
+
+        <h3>Equity and the betting decision</h3>
+        <p>
+            Equity should be compared against the share of the final pot you
+            have to pay for yourself:
+            <strong>EV = equity × final pot − your contribution</strong>. A
+            bet is profitable when
+            <strong>equity &gt; your contribution / final pot</strong>.
+        </p>
+        <p>
+            When both players are all in for the same amount and there is no
+            other money in the pot, your share of the final pot is exactly
+            half — then, and only then, the break-even point is 50 %. If the
+            pot already holds €50 of dead money and both players put in
+            €100, the pot is €250 and the break-even drops to 40 %: 45 %
+            equity is then clearly profitable. Rake moves the line the other
+            way — at 5 % rake it rises to about 52.6 %, so 52 % equity is
+            slightly losing.
+        </p>
+        <p>
+            These are all-in equities: they assume every card is dealt with
+            no further betting. If play continues, equity alone does not
+            decide it — position, playability and who has the harder
+            decisions on later streets all matter.
+        </p>
+
+        <h3>The three extra Hi/Lo rows</h3>
+        <p>
+            For the halves of the pot Hi/Lo shows <strong>two different
+            quantities</strong>, and they are easy to confuse.
+            <em>Share hi/lo</em> is how much of the whole pot the player
+            wins through each half; the hi share includes the whole pot from
+            deals where no low was made, so hi + lo = equity.
+            <em>Wins hi/lo</em> and <em>Ties hi/lo</em> are frequencies
+            instead: how often the player takes a half outright or splits
+            it. On all three rows the first number is hi and the second lo.
+        </p>
+        <p>
+            The two differ because winning the high half is worth different
+            amounts on different boards: on a board with no qualifying low
+            it takes the whole pot, on a low board only half. JQK2 against
+            one random hand wins the high half 45.50 % of the time but
+            collects only 35.64 % of the pot through it, because 54.01 % of
+            boards allow a low. Other calculators usually show the
+            frequencies; the equity (EV) is the same in both.
+        </p>
+        <p>
+            The row also tells you whether a hand's value leans high or low.
+            That matters multiway: value resting on the low half is halved
+            the moment another player makes the same low, while value
+            resting on the high hand is untouched by it.
+        </p>
 
         <h2>Omaha Hi/Lo in the simulator</h2>
         <p>
@@ -167,34 +288,9 @@
             Each half uses exactly two hole cards and three board cards,
             and they may be different cards. If nobody makes a qualifying
             low (the board must contain three distinct ranks of eight or
-            lower), the high hand takes the whole pot.
-        </p>
-        <p>
-            In the results, <strong>equity</strong> is the player's average
-            share of the pot, <strong>scoop</strong> means taking the whole
-            pot alone, and <strong>part-pot</strong> is any shared portion
-            (for example a quarter, when the low is split). Exact
-            enumeration works in Hi/Lo just as in the other game types when
-            every player's cards are known.
-        </p>
-        <p>
-            For the halves the simulator shows <strong>two different
-            quantities</strong>, and they are easy to confuse.
-            <em>Share hi/lo</em> is how much of the whole pot the player
-            wins through each half; the hi share includes the whole pot from
-            rounds where no low was made, so hi + lo = equity.
-            <em>Wins hi/lo</em> and <em>Ties hi/lo</em> are frequencies
-            instead: how often the player takes a half outright or splits
-            it. On all three rows the first number is hi and the second lo.
-        </p>
-        <p>
-            The two differ because winning the high half is worth different
-            amounts on different boards: on a board with no qualifying low
-            it takes the whole pot, on a low board only half. For example
-            JQK2 against one random hand wins the high half 45.50 % of the
-            time but collects only 35.64 % of the pot through it, because
-            54.01 % of boards allow a low. Other calculators usually show
-            the frequencies; the equity (EV) is the same in both.
+            lower), the high hand takes the whole pot. Exact enumeration
+            works in Hi/Lo just as in the other game types when every
+            player's cards are known.
         </p>
         <p>
             The Hi/Lo heads-up preflop table was computed exactly with the
