@@ -5,7 +5,7 @@
 Taulukot kattavat jokaisen käsiluokan jokaisella pelaajamäärällä:
 Hold'em (169 luokkaa, 2–10 pelaajaa), Omaha (16 432 luokkaa,
 2–9 pelaajaa), viisikorttinen Omaha (134 459 luokkaa, 2–9 pelaajaa)
-ja Omaha Hi/Lo 8-or-better (16 432 luokkaa, heads-up) —
+ja Omaha Hi/Lo 8-or-better (16 432 luokkaa, 2–3 pelaajaa) —
 equity-arvoineen, keskivirheineen ja sijaepävarmuuksineen. Data on
 vapaasti käytettävissä [CC BY 4.0](LICENSE) -lisenssillä.
 
@@ -46,6 +46,7 @@ ihmiselle. Menetelmä ja tarkkuus ovat tiedoston `meta`-lohkossa.
 | `preflop-omaha5-8max-hybrid` | Omaha5 | 8 | hybridi | ± 0.0058 pp |
 | `preflop-omaha5-9max-hybrid` | Omaha5 | 9 | hybridi | ± 0.0051 pp |
 | `preflop-omahahilo-2max-exact` | Omaha Hi/Lo | 2 | eksakti | **tarkka murtoluku** |
+| `preflop-omahahilo-3max-hybrid` | Omaha Hi/Lo | 3 | hybridi | ± 0.0039 pp |
 
 **Eksakti** = kaikki C(52,5) = 2 598 960 pöytää ja kaikki vastustajakädet
 käydään läpi; tulos on tarkka murtoluku, ja `winCount`/`tieCount`/`denominator`
@@ -98,6 +99,18 @@ C(48,5), ei (pöytä, vastustaja) -parien määrä.
 Satunnaista kättä vastaan luku on pieni, mutta se tekee näkyväksi sen
 oletuksen johon koko taulukko perustuu (ks. alla kohta järjestyksen
 rajoista).
+
+**Useamman pelaajan hi/lo-taulukoissa** (`preflop-omahahilo-3max-hybrid`)
+sarakkeet ovat samat kolmea poikkeusta lukuun ottamatta. Osuuksilla on
+kullakin oma keskivirheensä: `se`/`seCmp` equitylle, `seHi` ja `seLo`
+puoliskoille. `threeQuarters` puuttuu, koska moninpelissä osuus ei rajoitu
+neljänneksiin — kolmisuuntainen jako tuottaa myös kuudesosia — ja tilalla
+on `half`, joka on selvästi yleisin yksittäinen osuus. `lowMade` ja
+`nutLow` puuttuvat, koska ne eivät riipu pelaajamäärästä lainkaan;
+eksaktit arvot ovat heads-up-taulukossa. Osuudet lasketaan
+kokonaislukuina, joissa koko potti on 5040 yksikköä: luku on jaollinen
+kaikilla tasapelien pelaajamäärillä 2–10 ja osamäärä on aina parillinen,
+joten myös puoliskoihin jako menee tasan eikä pyöristysvirhettä synny.
 
 ### Sija-alue `rankLow`/`rankHigh` (CSV: `rank_low`/`rank_high`)
 
@@ -154,7 +167,8 @@ tarkkuudella - peräkkäisten erot ovat pienempiä kuin keskivirhe.
 
 ### Omaha Hi/Lo: mitä järjestys mittaa
 
-Hi/Lo:n taulukko on eksakti, joten sija ei ole tarkkuudesta kiinni. Sen
+Hi/Lo:n heads-up-taulukko on eksakti ja kolmen pelaajan taulukko hybridi,
+joten sija ei juuri ole tarkkuudesta kiinni. Sen
 sijaan **skenaario** rajaa tulkintaa: equity lasketaan satunnaista kättä
 vastaan, ja satunnainen käsi tekee kelvollisen low'n verrattain harvoin.
 Kädet joiden arvo nojaa pelkästään matalaan puoliskoon - tyypillisesti
@@ -163,10 +177,20 @@ kuin ne oikeaa vastustajajoukkoa vastaan ansaitsisivat: pöydässä jossa
 muutkin pelaavat A2-kortteja low jaetaan ja osuus putoaa neljännekseen.
 
 `loTie`-sarake tekee tämän mitattavaksi: se kertoo kuinka usein matala
-puolisko jaetaan **tässä skenaariossa**. Kun moninpelitaulukot valmistuvat,
-sama luku kasvaa pelaajamäärän mukana, ja ero yksittäisen käden sijassa
-heads-upin ja 9-maxin välillä kertoo suoraan kuinka paljon käden arvo
-riippuu siitä, ettei kukaan muu kilpaile low'sta.
+puolisko jaetaan **tässä skenaariossa**. Kolmen pelaajan taulukko näyttää
+mihin suuntaan luku liikkuu: mediaani nousee 2,00 %:sta 2,57 %:iin ja
+kvartautuminen 1,13 %:sta 2,27 %:iin, listan ykkösellä AA32 (ds) `loTie`
+2,12 %:sta 4,03 %:iin. Kilpailu low'sta siis kasvaa pelaajamäärän mukana,
+mutta satunnaisia käsiä vastaan se kasvaa hitaasti — oikeassa pöydässä,
+jossa muutkin valikoivat A2-kortteja, nousu on jyrkempi.
+
+Huomaa ettei järjestys silti liiku siihen suuntaan mihin arvaisi:
+satunnaisia vastustajia vastaan matalaan nojaavat kädet **nousevat**
+kolmella pelaajalla (5432 nousee yli 8 000 sijaa), koska korkeasta
+puoliskosta kilpailee yksi pelaaja enemmän mutta matalasta ei juurikaan.
+Sama ilmiö toisin päin: paljas A2 näyttää listalla sitä vahvemmalta mitä
+enemmän pöydässä on pelaajia, vaikka juuri silloin todellinen
+kvartautumisriski on suurimmillaan.
 
 ## Puuttuu
 
@@ -175,7 +199,7 @@ riippuu siitä, ettei kukaan muu kilpaile low'sta.
 | Hold'em | - (kaikki 2-10 laskettu) |
 | Omaha | - (kaikki 2-9 laskettu) |
 | Omaha5 | - (kaikki 2-9 laskettu) |
-| Omaha Hi/Lo | 3-9 (vain heads-up laskettu) |
+| Omaha Hi/Lo | 4-9 (2-3 laskettu) |
 
 Omaha5:lle ei ole eksaktia taulukkoa millään pelaajamäärällä (laskenta
 olisi liian raskas) - sivusto näyttää sille aina hybridiarvon

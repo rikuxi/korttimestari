@@ -2149,8 +2149,14 @@ button.example-chip:hover {
 }
 
 /* Hi/Lo:n lisätiedot avatussa rivissä */
+.hand-detail-extra-caption {
+    font-size: 13px;
+    color: var(--text-soft);
+    margin-top: 10px;
+}
+
 .hand-detail-extra {
-    margin: 10px 0 2px 18px;
+    margin: 4px 0 2px 18px;
     font-size: 13px;
     color: var(--text-muted);
 }

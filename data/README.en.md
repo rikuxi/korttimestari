@@ -5,7 +5,7 @@
 The tables cover every hand class at every player count: Hold'em
 (169 classes, 2–10 players), Omaha (16,432 classes, 2–9 players),
 five-card Omaha (134,459 classes, 2–9 players) and Omaha Hi/Lo
-8-or-better (16,432 classes, heads-up) — with equities,
+8-or-better (16,432 classes, 2–3 players) — with equities,
 standard errors and rank uncertainty ranges. The data is free to use
 under the [CC BY 4.0](LICENSE) license.
 
@@ -47,6 +47,7 @@ and `.csv` for humans. The method and precision are in each file's
 | `preflop-omaha5-8max-hybrid` | Omaha5 | 8 | hybrid | ± 0.0058 pp |
 | `preflop-omaha5-9max-hybrid` | Omaha5 | 9 | hybrid | ± 0.0051 pp |
 | `preflop-omahahilo-2max-exact` | Omaha Hi/Lo | 2 | exact | **exact fraction** |
+| `preflop-omahahilo-3max-hybrid` | Omaha Hi/Lo | 3 | hybrid | ± 0.0039 pp |
 
 **Exact** = all C(52,5) = 2,598,960 boards and all opponent hands are
 enumerated; the result is an exact fraction, and
@@ -98,6 +99,18 @@ not the number of (board, opponent) pairs.
 how often the share drops to a quarter of the pot. Against a random hand the
 figure is small, but it makes visible the assumption the whole table rests on
 (see the note on ranking limits below).
+
+**The multiway hi/lo tables** (`preflop-omahahilo-3max-hybrid`) carry the
+same columns with three exceptions. Each share has its own standard error:
+`se`/`seCmp` for the equity, `seHi` and `seLo` for the halves.
+`threeQuarters` is gone, because multiway the share is not confined to
+quarters — a three-way split produces sixths as well — and in its place is
+`half`, by far the most common single share. `lowMade` and `nutLow` are
+gone because they do not depend on the player count at all; the exact
+values are in the heads-up table. Shares are accumulated as integers with
+the whole pot as 5040 units: the number is divisible by every tie size
+from 2 to 10 players and the quotient is always even, so splitting into
+halves is exact as well and no rounding error arises.
 
 ### Rank range `rankLow`/`rankHigh` (CSV: `rank_low`/`rank_high`)
 
@@ -160,7 +173,8 @@ smaller than the standard error.
 
 ### Omaha Hi/Lo: what the ordering measures
 
-The Hi/Lo table is exact, so a rank is not limited by precision. What
+The Hi/Lo heads-up table is exact and the three-handed one is a hybrid, so
+a rank is hardly limited by precision. What
 limits the reading is the **scenario**: equity is computed against a
 random hand, and a random hand qualifies for low fairly rarely. Hands
 whose value rests on the low half alone - typically a bare A2 with no
@@ -169,10 +183,19 @@ realistic set of opponents: at a table where others also play A2 cards
 the low gets split and the share drops to a quarter.
 
 The `loTie` column makes this measurable: it says how often the low half
-is split **in this scenario**. Once the multiway tables exist, the same
-figure grows with the player count, and the gap between a hand's rank
-heads-up and 9-handed states directly how much of its value depends on
-nobody else competing for the low.
+is split **in this scenario**. The three-handed table shows which way the
+figure moves: the median rises from 2.00 % to 2.57 % and quartering from
+1.13 % to 2.27 %; for the top-ranked AA32 (ds) `loTie` goes from 2.12 % to
+4.03 %. Competition for the low does grow with the player count, but
+against random hands it grows slowly — at a real table, where the others
+also select for A2 cards, the rise is far steeper.
+
+Note that the ordering nevertheless moves the opposite way to the naive
+guess: against random opponents, low-leaning hands **rise** three-handed
+(5432 climbs more than 8,000 ranks), because one more player competes for
+the high half while barely anyone competes for the low. The same effect
+read backwards: a bare A2 looks stronger on the list the more players sit
+at the table, precisely when its real quartering risk is greatest.
 
 ## Missing
 
@@ -181,7 +204,7 @@ nobody else competing for the low.
 | Hold'em | - (all of 2-10 computed) |
 | Omaha | - (all of 2-9 computed) |
 | Omaha5 | - (all of 2-9 computed) |
-| Omaha Hi/Lo | 3-9 (only heads-up computed) |
+| Omaha Hi/Lo | 4-9 (2-3 computed) |
 
 Omaha5 has no exact table at any player count (the computation would
 be too heavy) - the site always shows it a hybrid value with its

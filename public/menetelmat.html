@@ -69,6 +69,7 @@
                 <tr><td>Omaha</td><td>16 432</td><td>3–9</td><td>hybridi</td><td>± 0.0019–0.0046 %-yks.</td></tr>
                 <tr><td>Omaha5</td><td>134 459</td><td>2–9</td><td>hybridi</td><td>± 0.0051–0.0125 %-yks.</td></tr>
                 <tr><td>Omaha Hi/Lo</td><td>16 432</td><td>2</td><td>eksakti</td><td>tarkka murtoluku</td></tr>
+                <tr><td>Omaha Hi/Lo</td><td>16 432</td><td>3</td><td>hybridi</td><td>± 0.0039 %-yks.</td></tr>
             </tbody>
         </table>
 
@@ -297,8 +298,19 @@
             potti jaettuna hi- ja low-puoliskoihin. Osuudet lasketaan
             neljännespotin kokonaislukuyksiköissä, joten tulos on tarkka
             murtoluku, ja taulukko erittelee hi- ja low-puoliskojen osuudet.
-            Useamman pelaajan Hi/Lo-taulukoita ei vielä ole — niillä
-            pelaajamäärillä all-in preflop tuntemattomia vastaan lasketaan
+        </p>
+        <p>
+            Kolmen pelaajan Hi/Lo-taulukko on laskettu hybridimenetelmällä:
+            kaikki 2 598 960 pöytää käydään läpi ja vastustajien korttien
+            poisto arvotaan (32 konfiguraatiota pöytää kohti, 16 riippumatonta
+            toistoa keskivirhettä varten). Osuudet kertyvät kokonaislukuina,
+            joissa koko potti on 5040 yksikköä — luku on jaollinen kaikilla
+            tasapelien pelaajamäärillä ja osamäärä on parillinen, joten myös
+            puoliskoihin jako menee tasan. Menetelmä varmennettiin ajamalla
+            sama putki kahdella pelaajalla ja vertaamalla eksaktiin
+            heads-up-taulukkoon: kaikilla 16 432 käsiluokalla ja yhdellätoista
+            suureella suurin ero oli 0,03 %-yksikköä. Neljästä pelaajasta
+            ylöspäin all-in preflop tuntemattomia vastaan lasketaan yhä
             simuloimalla.
         </p>
 

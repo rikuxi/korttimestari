@@ -124,6 +124,18 @@ document.addEventListener('DOMContentLoaded', () => {
         metaEl.textContent = text;
     }
 
+    // Koko rivin levyisten solujen (detaljipaneeli, "ei tuloksia") colspan:
+    // piilotetut sarakkeet (col-label, col-hilo, col-se) eivät kelpaa lukuun,
+    // koska näkyviä sarakkeita suurempi colspan luo table-layout: fixed
+    // -asettelussa haamusarakkeita, jotka kaventavat näkyviä sarakkeita
+    function visibleColCount() {
+        let n = 0;
+        for (const th of tableEl.querySelectorAll('thead th')) {
+            if (getComputedStyle(th).display !== 'none') n++;
+        }
+        return n;
+    }
+
     function renderRows(data) {
         const isHoldem = state.gameType === 'holdem';
         tableEl.classList.toggle('no-label-col', isHoldem);
@@ -196,7 +208,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (data.hands.length === 0) {
             const tr = document.createElement('tr');
             const td = document.createElement('td');
-            td.colSpan = 9;
+            td.colSpan = visibleColCount();
             td.className = 'no-results';
             td.textContent = t('rk.noResults');
             tr.appendChild(td);
@@ -222,7 +234,7 @@ document.addEventListener('DOMContentLoaded', () => {
         detail.className = 'detail-row';
         detail.setAttribute('data-key', hand.key);
         const td = document.createElement('td');
-        td.colSpan = 9;
+        td.colSpan = visibleColCount();
         td.textContent = t('rk.loadingDetail');
         detail.appendChild(td);
         tr.after(detail);
@@ -280,16 +292,24 @@ document.addEventListener('DOMContentLoaded', () => {
         }
         td.appendChild(sub);
 
-        // Hi/Lo: pelaajamäärävertailussa on toistaiseksi vain heads-up, joten
-        // paneelissa on tilaa sille mitä päätaulukkoon ei mahdu - kuinka usein
-        // puoliskot voitetaan ja miten koko potinosuus jakautuu.
-        const hl = data.byPlayers.find(r => r.scoop !== undefined);
+        // Hi/Lo: paneelissa on tilaa sille mitä päätaulukkoon ei mahdu -
+        // kuinka usein puoliskot voitetaan ja miten koko potinosuus jakautuu.
+        // Nämä riippuvat pelaajamäärästä, joten näytetään valitun määrän rivi
+        // (tai ensimmäinen jolta luvut löytyvät) ja kerrotaan mikä se on.
+        const hl = data.byPlayers.find(r => r.players === state.players && r.scoop !== undefined)
+            || data.byPlayers.find(r => r.scoop !== undefined);
+        // lowMade ja nutLow eivät riipu pelaajamäärästä lainkaan, joten ne
+        // otetaan miltä tahansa riviltä jolla ne ovat (eksakti heads-up).
+        const lowRow = data.byPlayers.find(r => r.lowMade !== undefined);
         if (hl) {
             const pct = x => x.toLocaleString(locale,
                 { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' %';
-            const list = document.createElement('ul');
-            list.className = 'hand-detail-extra';
-            for (const text of [
+            const cap = document.createElement('div');
+            cap.className = 'hand-detail-extra-caption';
+            cap.textContent = t('rk.detailHiloCaption', { players: hl.players });
+            td.appendChild(cap);
+
+            const texts = [
                 t('rk.detailHalves', {
                     hiWin: pct(hl.hiWin), hiTie: pct(hl.hiTie),
                     loWin: pct(hl.loWin), loTie: pct(hl.loTie)
@@ -297,9 +317,16 @@ document.addEventListener('DOMContentLoaded', () => {
                 t('rk.detailShares', {
                     scoop: pct(hl.scoop), part: pct(hl.partPot),
                     quarter: pct(hl.quarter), none: pct(hl.scoopedOn)
-                }),
-                t('rk.detailLow', { made: pct(hl.lowMade), nut: pct(hl.nutLow) })
-            ]) {
+                })
+            ];
+            if (lowRow) {
+                texts.push(t('rk.detailLow', {
+                    made: pct(lowRow.lowMade), nut: pct(lowRow.nutLow)
+                }));
+            }
+            const list = document.createElement('ul');
+            list.className = 'hand-detail-extra';
+            for (const text of texts) {
                 const li = document.createElement('li');
                 li.textContent = text;
                 list.appendChild(li);

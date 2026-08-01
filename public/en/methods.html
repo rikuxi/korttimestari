@@ -69,6 +69,7 @@
                 <tr><td>Omaha</td><td>16,432</td><td>3–9</td><td>hybrid</td><td>± 0.0019–0.0046 pp</td></tr>
                 <tr><td>Omaha5</td><td>134,459</td><td>2–9</td><td>hybrid</td><td>± 0.0051–0.0125 pp</td></tr>
                 <tr><td>Omaha Hi/Lo</td><td>16,432</td><td>2</td><td>exact</td><td>exact fraction</td></tr>
+                <tr><td>Omaha Hi/Lo</td><td>16,432</td><td>3</td><td>hybrid</td><td>± 0.0039 pp</td></tr>
             </tbody>
         </table>
 
@@ -298,9 +299,21 @@
             on each board all C(43,4) = 123,410 opponent hands, with the pot
             split into hi and low halves. Shares are counted in integer
             quarter-pot units, so the result is an exact fraction, and the
-            table breaks out the hi and low half shares. Multiway Hi/Lo
-            tables do not exist yet — for those player counts, all-in
-            preflop against unknown opponents is computed by simulation.
+            table breaks out the hi and low half shares.
+        </p>
+        <p>
+            The three-handed Hi/Lo table was computed with the hybrid method:
+            all 2,598,960 boards are enumerated and only the opponents' card
+            removal is sampled (32 configurations per board, 16 independent
+            replicates for the standard error). Shares accumulate as integers
+            with the whole pot as 5040 units — the number is divisible by
+            every tie size and the quotient is even, so splitting into halves
+            is exact too. The method was verified by running the same
+            pipeline with two players and comparing it against the exact
+            heads-up table: across all 16,432 hand classes and eleven
+            quantities the largest difference was 0.03 percentage points.
+            From four players up, all-in preflop against unknown opponents is
+            still computed by simulation.
         </p>
 
         <h2>Data and license</h2>

@@ -89,11 +89,13 @@ const I18N_CATALOGS = {
         'rk.detailFailed': 'Vertailun haku epäonnistui.',
         'rk.detailCaption': '{hand} pelaajamäärittäin:',
         // Hi/Lo:n lisätiedot avatussa rivissä (vain hi/lo-taulukoissa)
+        'rk.detailHiloCaption': 'Hi/Lo-luvut {players} pelaajalla:',
         'rk.detailHalves': 'Voittaa korkean puoliskon yksin {hiWin}, jakaa sen {hiTie}; ' +
             'matalan yksin {loWin}, jakaa sen {loTie}.',
         'rk.detailShares': 'Koko potti yksin {scoop}, osa potista {part} ' +
             '(näistä neljännes {quarter}), ei mitään {none}.',
-        'rk.detailLow': 'Tekee kelvollisen matalan käden {made}, ja se on pöydän paras {nut}.',
+        'rk.detailLow': 'Tekee kelvollisen matalan käden {made}, ja se on pöydän paras {nut} ' +
+            '(ei riipu pelaajamäärästä).',
         'rk.col.players': 'Pelaajia',
         'rk.col.rank': 'Sija',
         'rk.col.equity': 'Equity %',
@@ -198,11 +200,13 @@ const I18N_CATALOGS = {
         'rk.loadingDetail': 'Loading player-count comparison…',
         'rk.detailFailed': 'Loading the comparison failed.',
         'rk.detailCaption': '{hand} by player count:',
+        'rk.detailHiloCaption': 'Hi/Lo figures with {players} players:',
         'rk.detailHalves': 'Takes the high half outright {hiWin}, splits it {hiTie}; ' +
             'the low half outright {loWin}, splits it {loTie}.',
         'rk.detailShares': 'Whole pot alone {scoop}, part of the pot {part} ' +
             '(a quarter in {quarter}), nothing {none}.',
-        'rk.detailLow': 'Makes a qualifying low {made}, and it is the board\'s best {nut}.',
+        'rk.detailLow': 'Makes a qualifying low {made}, and it is the board\'s best {nut} ' +
+            '(independent of the player count).',
         'rk.col.players': 'Players',
         'rk.col.rank': 'Rank',
         'rk.col.equity': 'Equity %',
