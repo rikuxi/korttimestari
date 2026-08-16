@@ -88,6 +88,8 @@ const I18N_CATALOGS = {
         'sim.rangeFetchFailed': 'Käsialueen haku epäonnistui.',
         'sim.rangeConflict': 'Valittuja käsialueita ei voi jakaa yhtä aikaa (liian kapeat alueet samoista käsistä).',
         'sim.rangeNote': 'Vastustajien käsialueet: {list}. Esilaskettua preflop-arvoa ei ole tälle asetelmalle.',
+        'sim.rangeNoteRank': 'Vastustajien käsialueet: {list}. Heron käsi: {rank} / {classes} käsiluokasta — ' +
+            'HUOM: sija on ranking satunnaisia käsiä vastaan, ei valittua aluetta vastaan.',
 
         // Rankingsivu (rankings.js)
         'rk.searching': 'Haetaan…',
@@ -217,6 +219,8 @@ const I18N_CATALOGS = {
         'sim.rangeFetchFailed': 'Fetching the hand range failed.',
         'sim.rangeConflict': 'The selected hand ranges cannot all be dealt at once (too narrow, built from the same hands).',
         'sim.rangeNote': 'Opponent hand ranges: {list}. No precomputed preflop value exists for this setup.',
+        'sim.rangeNoteRank': "Opponent hand ranges: {list}. Hero's hand: {rank} of {classes} hand classes — " +
+            'NOTE: the rank is against random hands, not against the selected range.',
 
         'rk.searching': 'Searching…',
         'rk.searchFailed': 'Search failed.',

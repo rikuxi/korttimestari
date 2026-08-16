@@ -1063,9 +1063,10 @@ document.addEventListener('DOMContentLoaded', () => {
             };
 
             pokerWorker.postMessage({ data, runId });
-            // Esilaskettu taulukko vastaa "vs. satunnaiset kädet" - ei päde
-            // käsialueita vastaan
-            if (!hasRanges) fetchPreflopExact(playerHandsData, communityCards);
+            // Käsialueita vastaan taulukon equity ei päde ("vs. satunnaiset
+            // kädet"), mutta sija näytetään silti - selvästi merkittynä
+            fetchPreflopExact(playerHandsData, communityCards,
+                hasRanges ? describeRanges(playerHandsData) : null);
             return;
         }
         
@@ -1138,17 +1139,28 @@ document.addEventListener('DOMContentLoaded', () => {
     const preflopCache = new Map();
 
     /** Näytä esilaskettu preflop-arvo tilastorivillä ja ilmoituksessa */
-    function renderPreflopInfo(data) {
-        const playerStats = document.getElementById('player0Stats');
-        const el = playerStats && playerStats.querySelector('.exact-value');
-        if (el) el.textContent = `${data.equity.toFixed(2)}%`;
-
+    function renderPreflopInfo(data, rangeList) {
         // Sija näytetään välinä jos keskivirhe ei riitä naulaamaan sitä:
         // esim. Omaha5:n keskivaiheilla todellinen sija voi olla ±sadat
         const fmt = n => n.toLocaleString(locale);
         const rankText = (data.rankHigh > data.rankLow)
             ? t('sim.rankRange', { rank: fmt(data.rank), low: fmt(data.rankLow), high: fmt(data.rankHigh) })
             : t('sim.rank', { rank: fmt(data.rank) });
+
+        if (rangeList) {
+            // Käsialueita vastaan taulukon equity ei päde (se on vs.
+            // satunnaiset kädet), joten "Tarkka"-riville ei kirjoiteta
+            // mitään. Sija kertoo silti käden vahvuuden kaikkiin käsiin
+            // nähden - näytetään ilmoituksessa selvästi merkittynä.
+            showNotice(t('sim.rangeNoteRank', {
+                list: rangeList, rank: rankText, classes: fmt(data.handClasses)
+            }));
+            return;
+        }
+
+        const playerStats = document.getElementById('player0Stats');
+        const el = playerStats && playerStats.querySelector('.exact-value');
+        if (el) el.textContent = `${data.equity.toFixed(2)}%`;
         showNotice(data.exact
             ? t('sim.preflopExact', {
                 equity: data.equity.toFixed(4), rank: rankText, classes: fmt(data.handClasses)
@@ -1164,7 +1176,7 @@ document.addEventListener('DOMContentLoaded', () => {
      * vastaus on esilaskettu levylle. Haetaan se simulaation rinnalle.
      * Omahan heads-up on eksakti, muut kertovat oman keskivirheensä.
      */
-    async function fetchPreflopExact(playerHandsData, communityCards) {
+    async function fetchPreflopExact(playerHandsData, communityCards, rangeList) {
         if (!isRandomOpponentsMode()) return;
         if (!['holdem', 'omaha', 'omaha5', 'omahahilo'].includes(currentGameType)) return;
 
@@ -1185,7 +1197,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const cacheKey = `${currentGameType}:${players}:${heroCards.slice().sort().join(',')}`;
         if (preflopCache.has(cacheKey)) {
             const cached = preflopCache.get(cacheKey);
-            if (cached) renderPreflopInfo(cached);
+            if (cached) renderPreflopInfo(cached, rangeList);
             return;
         }
 
@@ -1208,7 +1220,7 @@ document.addEventListener('DOMContentLoaded', () => {
             const data = await response.json();
             preflopCache.set(cacheKey, data);
             if (runId !== currentRunId) return;   // uusi ajo ehti alkaa
-            renderPreflopInfo(data);
+            renderPreflopInfo(data, rangeList);
         } catch (e) {
             // Haku on lisätieto - jos se ei onnistu, simulaatio riittää
         }
