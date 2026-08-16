@@ -1381,9 +1381,14 @@ button.tertiary-button:disabled {
     color: var(--success);
 }
 
+/* Yleinen "select, input" -sääntö antaa 8 px paddingin ja reunan, jolloin
+   rata jää elementtiä lyhyemmäksi ja nuppi ei yllä oikeaan laitaan -
+   nollataan kuten rankingsivun säätimessä */
 .range-slider {
     width: 92%;
     margin: 0;
+    padding: 0;
+    border: none;
     accent-color: var(--btn-tertiary);
     cursor: pointer;
 }
@@ -1397,6 +1402,8 @@ button.tertiary-button:disabled {
 
 #rangeAll {
     width: 140px;
+    padding: 0;
+    border: none;
     accent-color: var(--btn-tertiary);
 }
 
