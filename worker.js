@@ -40,8 +40,13 @@ try {
     parentPort.postMessage({ results });
 
 } catch (error) {
-    // Lähetä virheviesti turvallisesti - älä vuoda pinojälkeä
+    // Lähetä virheviesti turvallisesti - älä vuoda pinojälkeä.
+    // Alueiden yhteensopimattomuus on käyttäjän asetus, ei palvelinvika:
+    // siitä kerrotaan koodilla, jotta käyttöliittymä osaa sanoa sen.
+    const msg = String(error && error.message || '');
+    const rangeError = /Ranges conflict|no possible hands/.test(msg);
     parentPort.postMessage({
-        error: 'Simulation failed'
+        error: rangeError ? 'Ranges cannot all be dealt' : 'Simulation failed',
+        code: rangeError ? 'range_conflict' : undefined
     });
 }

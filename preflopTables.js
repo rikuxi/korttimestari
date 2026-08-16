@@ -190,6 +190,44 @@ function monteCarloSe(equityPct, meta) {
 }
 
 /**
+ * Top-X %:n alue: rivit sijajärjestyksessä alusta niin pitkälle kuin
+ * kombopainotettu topPct on korkeintaan pct. Rivit ovat sijajärjestyksessä
+ * ja topPct kasvaa monotonisesti, joten alue on aina listan alkuosa. Pieni
+ * epsilon sietää liukulukujen pyöristyksen rajalla (esim. pct=100 ja
+ * viimeisen rivin 100.0000001).
+ * @returns {{count: number, combos: number}}
+ */
+function rangeSlice(table, pct) {
+    const rows = table.rows;
+    let count = 0;
+    let combos = 0;
+    while (count < rows.length && rows[count].topPct <= pct + 1e-9) {
+        combos += rows[count].combos;
+        count++;
+    }
+    return { count, combos };
+}
+
+/**
+ * Käsialueen luokka-avaimet simulaattorille: top-X % pelaajamäärän
+ * rankingista. Moottori laajentaa avaimet komboiksi (engine.js:
+ * expandRangeKeys). null jos taulukkoa ei ole.
+ * @returns {?{keys: string[], classes: number, combos: number, totalCombos: number, players: number}}
+ */
+function rangeKeys(gameType, players, pct) {
+    const table = loadTable(gameType, players);
+    if (!table) return null;
+    const { count, combos } = rangeSlice(table, pct);
+    return {
+        keys: table.rows.slice(0, count).map(h => h.key),
+        classes: count,
+        combos,
+        totalCombos: table.totalCombos,
+        players
+    };
+}
+
+/**
  * Onko taulukko olemassa - pelkkä tiedostotarkistus, EI parsintaa.
  *
  * loadTable jokaiselle yhdistelmälle lataisi kaikki taulukot muistiin
@@ -246,4 +284,4 @@ function warmCache(onDone) {
     })();
 }
 
-module.exports = { lookup, available, loadTable, warmCache };
+module.exports = { lookup, available, loadTable, warmCache, rangeSlice, rangeKeys };

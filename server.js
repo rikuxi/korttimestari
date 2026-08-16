@@ -280,16 +280,8 @@ app.get('/rankings/range', lookupLimiter, (req, res) => {
         return res.status(404).json({ error: 'No precomputed table for this configuration', code: 'no_table' });
     }
 
-    // Rivit ovat sijajärjestyksessä ja topPct kasvaa monotonisesti, joten
-    // alue on aina alkuosa listasta. Pieni epsilon sietää liukulukujen
-    // pyöristyksen rajalla (esim. pct=100 ja viimeisen rivin 100.0000001).
     const rows = table.rows;
-    let count = 0;
-    let combos = 0;
-    while (count < rows.length && rows[count].topPct <= pct + 1e-9) {
-        combos += rows[count].combos;
-        count++;
-    }
+    const { count, combos } = preflopTables.rangeSlice(table, pct);
 
     const strip = h => ({
         key: h.key,
@@ -309,7 +301,12 @@ app.get('/rankings/range', lookupLimiter, (req, res) => {
         totalCombos: table.totalCombos,
         equityCutoff: count > 0 ? rows[count - 1].equity : null,
         lastIncluded: count > 0 ? strip(rows[count - 1]) : null,
-        firstExcluded: count < rows.length ? strip(rows[count]) : null
+        firstExcluded: count < rows.length ? strip(rows[count]) : null,
+        // keys=1: alueen luokka-avaimet simulaattorin käsialuetta varten.
+        // Selain laajentaa ne komboiksi itse (engine.js), joten palvelimen
+        // ei tarvitse lähettää kombolistaa - Omaha5:n top 30 % on ~40 000
+        // avainta (~400 kB), kombolistana yli 10-kertainen.
+        keys: req.query.keys === '1' ? rows.slice(0, count).map(h => h.key) : undefined
     });
 });
 
@@ -523,10 +520,39 @@ app.post('/simulate', apiLimiter, (req, res) => {
         return res.status(400).json({ error: 'Duplicate cards detected' });
     }
 
+    // Käsialueet: vastustajalle voi antaa rangePct (1..100) = top-X %
+    // pelaajamäärän preflop-rankingista. Avaimet ratkaistaan tässä
+    // taulukosta - asiakkaan lähettämiä avainlistoja ei oteta vastaan.
+    // 100 = kaikki kädet = tavallinen satunnainen vastustaja.
+    const playerHandsData = [];
+    const activePlayers = req.body.playerHandsData.filter(p => p && !p.isFolded).length;
+    for (let i = 0; i < req.body.playerHandsData.length; i++) {
+        const player = req.body.playerHandsData[i];
+        const entry = { hand: player.hand, isFolded: player.isFolded === true };
+        const pct = player.rangePct;
+        if (pct !== undefined && pct !== null) {
+            if (!Number.isFinite(pct) || pct <= 0 || pct > 100) {
+                return res.status(400).json({ error: `Player ${i + 1} rangePct must be between 0 and 100`, code: 'invalid_range_pct' });
+            }
+            if (i > 0 && randomOpponents && !entry.isFolded && pct < 100) {
+                const range = preflopTables.rangeKeys(gameType, activePlayers, pct);
+                if (!range) {
+                    return res.status(404).json({ error: 'No precomputed table for this configuration', code: 'no_table' });
+                }
+                if (range.keys.length === 0) {
+                    return res.status(400).json({ error: `Player ${i + 1} range is empty`, code: 'empty_range' });
+                }
+                entry.rangeKeys = range.keys;
+                entry.rangeId = `${gameType}:${activePlayers}:${pct}`;
+            }
+        }
+        playerHandsData.push(entry);
+    }
+
     // 2. RUN WORKER WITH TIMEOUT
     const worker = new Worker(path.resolve(__dirname, 'worker.js'), {
         workerData: {
-            playerHandsData: req.body.playerHandsData,
+            playerHandsData,
             communityCards,
             simulationCount,
             gameType,
@@ -550,6 +576,9 @@ app.post('/simulate', apiLimiter, (req, res) => {
             return;
         }
         if (result.error) {
+            if (result.code === 'range_conflict') {
+                return res.status(400).json({ error: result.error, code: result.code });
+            }
             return res.status(500).json({ error: result.error });
         }
         res.json(result);

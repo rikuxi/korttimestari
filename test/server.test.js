@@ -445,6 +445,75 @@ test('/rankings/range kertoo top-X %:n alueen tunnusluvut', async () => {
         (await fetch(`${baseUrl}/rankings/range?gameType=omaha&players=10&pct=10`)).status, 404);
 });
 
+test('/rankings/range?keys=1 palauttaa alueen luokka-avaimet', async () => {
+    const r = await (await fetch(`${baseUrl}/rankings/range?gameType=holdem&players=6&pct=10&keys=1`)).json();
+    assert.ok(Array.isArray(r.keys));
+    assert.strictEqual(r.keys.length, r.classes);
+    assert.strictEqual(r.keys[0], 'AA');
+    assert.strictEqual(r.keys[r.keys.length - 1], r.lastIncluded.key);
+    // Ilman keys=1 avaimia ei lähetetä
+    const plain = await (await fetch(`${baseUrl}/rankings/range?gameType=holdem&players=6&pct=10`)).json();
+    assert.strictEqual(plain.keys, undefined);
+});
+
+test('/simulate: rangePct rajaa vastustajan kädet top-X %:iin', async () => {
+    // Hero 72o vs. top 5 %: häviää lähes aina. Vs. kaikki kädet noin 35 %.
+    const body = pct => ({
+        simulationCount: 20000, gameType: 'holdem', randomOpponents: true,
+        playerHandsData: [
+            { hand: ['7h', '2d'], isFolded: false },
+            { hand: [], isFolded: false, rangePct: pct }
+        ],
+        communityCards: { flop: [], turn: null, river: null }
+    });
+    const tight = await (await post(body(5))).json();
+    const loose = await (await post(body(100))).json();
+    assert.ok(tight.results.equityPercentages[0] < 20, `tight ${tight.results.equityPercentages[0]}`);
+    assert.ok(loose.results.equityPercentages[0] > 30, `loose ${loose.results.equityPercentages[0]}`);
+});
+
+test('/simulate: rangePct validoidaan ja taulukoton kokoonpano antaa 404', async () => {
+    const base = {
+        simulationCount: 500, gameType: 'holdem', randomOpponents: true,
+        playerHandsData: [{ hand: ['7h', '2d'], isFolded: false }, { hand: [], isFolded: false, rangePct: 150 }],
+        communityCards: { flop: [], turn: null, river: null }
+    };
+    let res = await post(base);
+    assert.strictEqual(res.status, 400);
+    assert.strictEqual((await res.json()).code, 'invalid_range_pct');
+
+    base.playerHandsData[1].rangePct = 'abc';
+    res = await post(base);
+    assert.strictEqual(res.status, 400);
+
+    // Hi/Lo-taulukoita ei ole 9 pelaajalle
+    const hilo = {
+        simulationCount: 500, gameType: 'omahahilo', randomOpponents: true,
+        playerHandsData: [{ hand: ['Ah', '2h', '3d', 'Kc'], isFolded: false }].concat(
+            Array.from({ length: 8 }, () => ({ hand: [], isFolded: false, rangePct: 20 }))),
+        communityCards: { flop: [], turn: null, river: null }
+    };
+    res = await post(hilo);
+    assert.strictEqual(res.status, 404);
+    assert.strictEqual((await res.json()).code, 'no_table');
+});
+
+test('/simulate: keskenään mahdottomat alueet antavat 400 range_conflict', async () => {
+    // Top 0,5 % kuudella = pelkkä AA (6 komboa); kolme pelaajaa ei mahdu
+    const body = {
+        simulationCount: 500, gameType: 'holdem', randomOpponents: true,
+        playerHandsData: [
+            { hand: ['As', 'Ah'], isFolded: false },
+            { hand: [], isFolded: false, rangePct: 0.5 },
+            { hand: [], isFolded: false, rangePct: 0.5 }
+        ],
+        communityCards: { flop: [], turn: null, river: null }
+    };
+    const res = await post(body);
+    assert.strictEqual(res.status, 400);
+    assert.strictEqual((await res.json()).code, 'range_conflict');
+});
+
 test('/rankings/hand kertoo käden kaikilla pelaajamäärillä', async () => {
     // Hold'em AA: rivi jokaiselta pelaajamäärältä, equity laskee monotonisesti
     const aa = await (await fetch(`${baseUrl}/rankings/hand?gameType=holdem&key=AA`)).json();
