@@ -324,6 +324,42 @@
             5432 (r) sits at rank 14,534 heads-up and at 2,038 six-handed.
         </p>
 
+        <h2>Opponent hand ranges</h2>
+        <p>
+            In the unknown-opponents mode each opponent can be given a hand
+            range: "top X %" means the best X per cent of hands in the
+            preflop ranking for the table's player count, counted by combos
+            (in Hold'em a pair is 6 combos, an offsuit hand 12). The rule is
+            exactly the one used by the top-X % range chart on the rankings
+            page, so that page shows which hands the range contains. Every
+            opponent can have its own range — say UTG top 10 %, button top
+            40 %. 100 % is an ordinary random opponent.
+        </p>
+        <p>
+            The range follows the all-in equity ranking; it is not a real
+            opening range. It knows nothing about position, bet sizes or
+            playability, and in Omaha it weights AA hands more and rundowns
+            less than an experienced player would. It is, however, a
+            transparent and reproducible definition against which the hero's
+            hand can be measured.
+        </p>
+        <p>
+            In the simulation each range opponent receives a random hand from
+            its range on every round. With several range opponents the hands
+            are drawn independently and the round is rejected if two hands
+            share a card, so the joint distribution is exactly uniform over
+            all admissible hand combinations — the same as "the cards were
+            dealt and everyone happened to receive a hand in their range".
+            Sequential drawing (the second avoiding the first's cards) would
+            be subtly biased by blocker effects. Range hands are drawn before
+            the board and the other random hands, so the size of a range does
+            not depend on them. When the number of range hand combinations
+            times the remaining boards is small enough (typically after the
+            flop), the result is computed exactly by enumerating them all —
+            just as with known hands. There are no precomputed preflop tables
+            for ranges; those answer the question "vs. random hands".
+        </p>
+
         <h2>Data and license</h2>
         <p>
             The tables can be downloaded as CSV from the

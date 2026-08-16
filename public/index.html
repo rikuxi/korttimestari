@@ -107,6 +107,16 @@
                     </label>
                 </div>
             </div>
+
+            <!-- Näkyy vain "Tuntemattomat vastustajat" -tilassa: asettaa
+                 kaikkien vastustajien käsialueen kerralla (ranges.js) -->
+            <div class="setting-group range-setting" id="rangeSetting" hidden>
+                <label for="rangeAll">Vastustajien käsialue:</label>
+                <div class="range-all">
+                    <input type="range" id="rangeAll" min="1" max="100" step="1" value="100">
+                    <span id="rangeAllValue" class="range-all-value">Kaikki kädet</span>
+                </div>
+            </div>
         </div>
 
         <!-- New card deck section -->
@@ -153,6 +163,7 @@
     </div>
     
     <script src="/js/i18n.js"></script>
+    <script src="/js/ranges.js"></script>
     <script src="/js/script.js"></script>
 </body>
 </html>

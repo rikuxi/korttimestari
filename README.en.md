@@ -35,6 +35,12 @@ error bounds are documented in [data/README.en.md](data/README.en.md).
 - **Unknown opponents**: only hero's cards are known; opponents get new
   random hands every deal (opponent percentages are not shown because
   they carry no information)
+- **Hand ranges**: an unknown opponent can be limited to the "top X %" of
+  the preflop ranking for the player count, each opponent with its own
+  range (a slider over the cards; in Hold'em a 13×13 chart in a popover).
+  Hands for several ranges are drawn independently and clashing rounds
+  are rejected, so the joint distribution is uniform; small cases are
+  enumerated exactly
 - Board cards (flop/turn/river) can be set or dealt at random
 - Folding, random deals, 2- and 4-color decks
 - Light and dark theme: defaults to the operating system setting, and
@@ -92,14 +98,18 @@ poker-evaluator library on all C(52,5) = 2,598,960 hands
   "gameType": "holdem | omaha | omaha5",
   "randomOpponents": false,
   "playerHandsData": [
-    { "hand": ["As", "Ks"], "isFolded": false }
+    { "hand": ["As", "Ks"], "isFolded": false },
+    { "hand": [], "isFolded": false, "rangePct": 30 }
   ],
   "communityCards": { "flop": ["2h", "7d", "Jc"], "turn": null, "river": null }
 }
 ```
 
 Cards use the format `<rank><suit>`: rank `2-9, T, J, Q, K, A`, suit
-`s, h, d, c`.
+`s, h, d, c`. `rangePct` (optional, 0–100) limits an unknown opponent to
+the top X per cent of the preflop ranking for the active player count; the
+server resolves the range from its own table. `GET /rankings/range?...&keys=1`
+returns the same range as class keys for in-browser computation.
 
 ## GET /rankings
 

@@ -323,6 +323,43 @@
             heads-upissa sijalla 14 534 ja kuudella pelaajalla sijalla 2 038.
         </p>
 
+        <h2>Vastustajien käsialueet</h2>
+        <p>
+            Tuntemattomat vastustajat -tilassa vastustajalle voi antaa
+            käsialueen: "top X %" tarkoittaa pöydän pelaajamäärän
+            preflop-rankingin parhaita X prosenttia käsistä, laskettuna
+            komboittain (Hold'emissa pari on 6 komboa, offsuit-käsi 12).
+            Sääntö on täsmälleen sama kuin rankingsivun top-X %:n
+            aluechartissa, joten sieltä näkee mitkä kädet alueeseen kuuluvat.
+            Jokaiselle vastustajalle voi antaa oman alueen — esimerkiksi UTG
+            top 10 %, button top 40 %. 100 % on tavallinen satunnainen
+            vastustaja.
+        </p>
+        <p>
+            Alue on all-in-equityn mukainen ranking, ei oikea avausrange:
+            se ei tunne asemaa, panostuskokoja eikä pelattavuutta, ja
+            Omahassa se painottaa AA-käsiä enemmän ja rundowneja vähemmän
+            kuin kokenut pelaaja. Se on kuitenkin läpinäkyvä ja toistettava
+            määritelmä, jota vastaan heron käden voi mitata.
+        </p>
+        <p>
+            Simulaatiossa jokainen alue-vastustaja saa joka kierroksella
+            satunnaisen käden omasta alueestaan. Kun alue-vastustajia on
+            useita, kädet arvotaan toisistaan riippumatta ja koko kierros
+            hylätään, jos kaksi kättä jakaa kortin. Näin yhteisjakauma on
+            täsmälleen tasainen kaikkien sallittujen käsiyhdistelmien yli —
+            sama kuin "kortit jaettiin ja jokainen sattui saamaan alueensa
+            käden". Peräkkäinen arvonta (toinen välttäen ensimmäisen kortit)
+            olisi hienovaraisesti harhainen blokkerivaikutusten takia.
+            Alueen kädet arvotaan ennen pöytää ja muita satunnaiskäsiä, jotta
+            alueen koko ei riipu niistä. Kun alueiden käsiyhdistelmien määrä
+            kertaa jäljellä olevat pöydät on riittävän pieni (tyypillisesti
+            flopin jälkeen), tulos lasketaan tarkasti enumeroimalla ne
+            kaikki — kuten tunnetuilla käsillä. Esilaskettuja
+            preflop-taulukoita ei käsialueille ole; ne vastaavat kysymykseen
+            "vs. satunnaiset kädet".
+        </p>
+
         <h2>Data ja lisenssi</h2>
         <p>
             Taulukot voi ladata CSV-muodossa

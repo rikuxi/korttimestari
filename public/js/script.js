@@ -57,6 +57,8 @@ document.addEventListener('DOMContentLoaded', () => {
     // Onko tarkka enumerointi kesken workerissa - uusi ajo katkaisee sen,
     // muuten sen viesti jonottaisi enumeroinnin takana jopa ~10 s
     let exactInFlight = false;
+    // Käsialueiden avainhaku on asynkroninen: uusi käynnistys mitätöi vanhan
+    let rangeFetchToken = 0;
 
     // Tallenna playerHandsData simulaation ajaksi
     let currentPlayerHandsData = null;
@@ -129,6 +131,26 @@ document.addEventListener('DOMContentLoaded', () => {
         return checked && checked.value === 'random';
     }
 
+    // Vastustajien käsialueet (ranges.js). Rankingtaulukko valitaan
+    // aktiivisen pelaajamäärän mukaan - sama kuin /preflop-haussa: hero +
+    // foldaamattomat vastustajat.
+    function activePlayerCount() {
+        const playerCount = parseInt(playerCountSelect.value);
+        let n = 0;
+        for (let i = 0; i < playerCount; i++) {
+            const playerDiv = document.querySelector(`.player-input[data-player-index="${i}"]`);
+            if (!playerDiv || !playerDiv.classList.contains('folded')) n++;
+        }
+        return n;
+    }
+    const RangeUI = window.RangeUI;
+    RangeUI.init({
+        getContext: () => ({ gameType: currentGameType, players: activePlayerCount() }),
+        onChange: () => { if (isRandomOpponentsMode() && checkAllPlayersHaveCards()) runSimulation(); }
+    });
+    RangeUI.attachGlobal(document.getElementById('rangeAll'), document.getElementById('rangeAllValue'));
+    const rangeSetting = document.getElementById('rangeSetting');
+
     const handOrder = [
         "high card", "one pair", "two pairs", "three of a kind",
         "straight", "flush", "full house", "four of a kind",
@@ -190,6 +212,13 @@ document.addEventListener('DOMContentLoaded', () => {
                         displayExact(result);
                     } else if (type === 'error') {
                         exactInFlight = false;
+                        if (/Ranges conflict|no possible hands/.test(String(error))) {
+                            // Käyttäjän asetus, ei laskentavika: palvelin
+                            // päätyisi samaan
+                            showNotice(t('sim.rangeConflict'));
+                            finishSimulation();
+                            return;
+                        }
                         console.error('Worker error:', error);
                         // Fallback to server - kerro käyttäjälle
                         showNotice(t('sim.browserFallback'));
@@ -506,6 +535,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const playerCount = parseInt(playerCountSelect.value);
         playersContainer.innerHTML = '';
         usedCards.clear();
+        RangeUI.reset();
         const allDeckCards = document.querySelectorAll('.deck-card');
         allDeckCards.forEach(card => card.classList.remove('used'));
         
@@ -824,7 +854,11 @@ document.addEventListener('DOMContentLoaded', () => {
                 if (checkAllPlayersHaveCards()) runSimulation();
             });
             cardContainer.appendChild(foldButton);
-            
+
+            // Käsialueen säädin korttien päälle (näkyy vain tuntemattomien
+            // vastustajien tilassa, ks. CSS .random-opponent .range-control)
+            if (i > 0) RangeUI.mount(i, cardContainer);
+
             playerDiv.appendChild(cardContainer);
             playerDiv.appendChild(playerStats);
             playerPosition.appendChild(playerDiv);
@@ -854,7 +888,9 @@ document.addEventListener('DOMContentLoaded', () => {
                 playerDiv.classList.remove('random-opponent');
             }
         });
-        
+        rangeSetting.hidden = !isRandom;
+        if (!isRandom) RangeUI.hidePopover();
+
         if (isRandom && checkAllPlayersHaveCards()) {
             runSimulation();
         }
@@ -902,10 +938,25 @@ document.addEventListener('DOMContentLoaded', () => {
                 hand.push(card || '');
             }
 
-            playerHands.push({ hand, isFolded });
+            const entry = { hand, isFolded };
+            // Käsialue: vain tuntemattomille vastustajille; 100 = kaikki
+            // kädet, jolloin kenttää ei lähetetä lainkaan
+            if (isRandomOpponents && i > 0 && !isFolded) {
+                const pct = RangeUI.pctFor(i);
+                if (pct < 100) entry.rangePct = pct;
+            }
+            playerHands.push(entry);
         }
-        
+
         return playerHands;
+    }
+
+    // Kuvaus vastustajien alueista ilmoitusriville, esim. "P2 top 10 %, P3 top 40 %"
+    function describeRanges(playerHandsData) {
+        return playerHandsData
+            .map((p, i) => (i > 0 && !p.isFolded && p.rangePct < 100) ? `P${i + 1} ${t('sim.rangeTop', { pct: p.rangePct }).toLowerCase()}` : null)
+            .filter(Boolean)
+            .join(', ');
     }
     
     function collectCommunityCards() {
@@ -935,6 +986,22 @@ document.addEventListener('DOMContentLoaded', () => {
             return;
         }
 
+        // Käsialueet: hae luokka-avaimet ennen ajoa (välimuistista heti
+        // ensimmäisen jälkeen). Haku on asynkroninen, joten uusi käynnistys
+        // sen aikana mitätöi tämän - muuten kaksi ajoa lähtisi peräkkäin.
+        const hasRanges = isRandomOpponents && RangeUI.anyRange(playerHandsData);
+        if (hasRanges) {
+            const token = ++rangeFetchToken;
+            try {
+                await RangeUI.attachKeys(playerHandsData, currentGameType, activePlayers.length);
+            } catch (e) {
+                if (token !== rangeFetchToken) return;
+                showNotice(e && e.status === 404 ? t('sim.rangeNoTable') : t('sim.rangeFetchFailed'));
+                return;
+            }
+            if (token !== rangeFetchToken) return;
+        }
+
         let simulationCount = parseInt(simulationCountInput.value);
         if (simulationCount < 100) { simulationCount = 100; simulationCountInput.value = 100; }
         // Selaimessa laskee oma kone, joten katto voi olla korkea. Palvelin
@@ -947,6 +1014,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const communityCards = collectCommunityCards();
 
         clearNotice();
+        if (hasRanges) showNotice(t('sim.rangeNote', { list: describeRanges(playerHandsData) }));
         // Karkea kestoarvio (mitatut yksikkökustannukset, selain ~1.5x Node).
         // Omaha5 on ~80x Hold'emia raskaampi per kierros, joten sama
         // kierrosmäärä voi olla 0.7 s tai lähes minuutin - isosta ajosta
@@ -995,7 +1063,9 @@ document.addEventListener('DOMContentLoaded', () => {
             };
 
             pokerWorker.postMessage({ data, runId });
-            fetchPreflopExact(playerHandsData, communityCards);
+            // Esilaskettu taulukko vastaa "vs. satunnaiset kädet" - ei päde
+            // käsialueita vastaan
+            if (!hasRanges) fetchPreflopExact(playerHandsData, communityCards);
             return;
         }
         
@@ -1025,7 +1095,10 @@ document.addEventListener('DOMContentLoaded', () => {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
-                    playerHandsData,
+                    // Avaimet jäävät pois: palvelin ratkaisee alueen itse
+                    // rangePct:stä (eikä Omaha5:n 40 000 avainta kulje verkossa)
+                    playerHandsData: playerHandsData.map(({ hand, isFolded, rangePct }) =>
+                        rangePct !== undefined ? { hand, isFolded, rangePct } : { hand, isFolded }),
                     communityCards,
                     simulationCount,
                     gameType: currentGameType,
@@ -1163,14 +1236,17 @@ document.addEventListener('DOMContentLoaded', () => {
             if (!playerStats) return;
             const el = playerStats.querySelector('.exact-value');
             if (!el) return;
-            if (playerData.isFolded || (isRandomOpponents && index > 0)) {
+            // Käsialueen vastustajalle tarkka arvo näytetään kuten kiinteälle
+            if (playerData.isFolded || (isRandomOpponents && index > 0 && !(playerData.rangePct < 100))) {
                 el.textContent = '-';
             } else {
                 el.textContent = `${result.equityPercentages[index].toFixed(2)}%`;
             }
         });
 
-        showNotice(t('sim.exactDone', { n: result.boards.toLocaleString(locale) }));
+        showNotice(result.rangeCombos > 1
+            ? t('sim.exactDoneRange', { c: result.rangeCombos.toLocaleString(locale), n: result.boards.toLocaleString(locale) })
+            : t('sim.exactDone', { n: result.boards.toLocaleString(locale) }));
     }
 
     function displayResults(results, playerHandsData) {
@@ -1204,9 +1280,11 @@ document.addEventListener('DOMContentLoaded', () => {
                     playerStats.querySelector('.se-value').textContent = '-';
                     clearHiLo();
                     playerStats.querySelector('.mini-progress-bar').style.width = '0%';
-                } else if (isRandomOpponents && index > 0) {
+                } else if (isRandomOpponents && index > 0 && !(playerData.rangePct < 100)) {
                     // Tuntemattomien vastustajien todennäköisyyksiä ei näytetä:
-                    // kädet vaihtuvat joka jaossa, joten prosentit eivät kerro mitään
+                    // kädet vaihtuvat joka jaossa, joten prosentit eivät kerro mitään.
+                    // Käsialueen vastustajalle ne näytetään: "top 10 %:n käsi
+                    // voittaa X %" on mielekäs luku.
                     playerStats.querySelector('.win-value').textContent = '-';
                     playerStats.querySelector('.tie-value').textContent = '-';
                     playerStats.querySelector('.equity-value').textContent = '-';

@@ -36,6 +36,12 @@ virherajat on dokumentoitu tiedostossa [data/README.md](data/README.md).
 - **Tuntemattomat vastustajat**: vain heron kortit tunnetaan; vastustajille
   arvotaan uudet kädet joka jaossa (vastustajien prosentteja ei näytetä,
   koska ne eivät kerro mitään)
+- **Käsialueet**: tuntemattomalle vastustajalle voi antaa alueen "top X %"
+  pelaajamäärän preflop-rankingista, jokaiselle omansa (liukusäädin
+  korttien päällä, Hold'emissa 13×13-chart ponnahdusikkunassa). Useiden
+  alueiden kädet arvotaan riippumattomasti ja törmäävät kierrokset
+  hylätään, joten yhteisjakauma on tasainen; pienissä tapauksissa alueet
+  enumeroidaan tarkasti
 - Pöytäkortit (flop/turn/river) voi asettaa tai arpoa
 - Foldaus, korttien arvonta, 2- ja 4-värinen pakka
 - Vaalea ja tumma tila: oletus tulee käyttöjärjestelmän asetuksesta,
@@ -91,13 +97,18 @@ poker-evaluator-kirjastoa vasten kaikilla C(52,5) = 2 598 960 kädellä
   "gameType": "holdem | omaha | omaha5",
   "randomOpponents": false,
   "playerHandsData": [
-    { "hand": ["As", "Ks"], "isFolded": false }
+    { "hand": ["As", "Ks"], "isFolded": false },
+    { "hand": [], "isFolded": false, "rangePct": 30 }
   ],
   "communityCards": { "flop": ["2h", "7d", "Jc"], "turn": null, "river": null }
 }
 ```
 
 Kortit muodossa `<arvo><maa>`: arvo `2-9, T, J, Q, K, A`, maa `s, h, d, c`.
+`rangePct` (valinnainen, 0–100) rajaa tuntemattoman vastustajan kädet
+aktiivisen pelaajamäärän preflop-rankingin parhaisiin X prosenttiin;
+palvelin ratkaisee alueen itse taulukosta. `GET /rankings/range?...&keys=1`
+palauttaa saman alueen luokka-avaimet selaimen laskentaa varten.
 
 ## GET /rankings
 

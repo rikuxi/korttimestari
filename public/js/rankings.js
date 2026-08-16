@@ -638,6 +638,17 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     });
 
+    // Osoiteparametrit (simulaattorin käsialue-linkki): ?gameType=&players=&pct=
+    {
+        const qs = new URLSearchParams(location.search);
+        const g = qs.get('gameType');
+        if (['holdem', 'omaha', 'omaha5', 'omahahilo'].includes(g)) state.gameType = g;
+        const p = parseInt(qs.get('players'), 10);
+        if (p >= 2 && p <= 10) state.players = p;
+        const pct = parseInt(qs.get('pct'), 10);
+        if (pct >= 1 && pct <= 100) { rangePct = pct; rangeSlider.value = String(pct); }
+    }
+
     // Käynnistys: hae saatavilla olevat taulukot ja näytä oletuslista
     (async () => {
         try {
