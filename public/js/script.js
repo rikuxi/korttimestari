@@ -1146,6 +1146,14 @@ document.addEventListener('DOMContentLoaded', () => {
         const rankText = (data.rankHigh > data.rankLow)
             ? t('sim.rankRange', { rank: fmt(data.rank), low: fmt(data.rankLow), high: fmt(data.rankHigh) })
             : t('sim.rank', { rank: fmt(data.rank) });
+        // Kombopainotettu top-%: sama esitys kuin rankingsivulla (parhaat
+        // kädet tarvitsevat kaksi desimaalia, AA = 0,45 %)
+        const top = typeof data.topPct === 'number'
+            ? data.topPct.toLocaleString(locale, {
+                minimumFractionDigits: data.topPct < 10 ? 2 : 1,
+                maximumFractionDigits: data.topPct < 10 ? 2 : 1
+            }) + ' %'
+            : '?';
 
         if (rangeList) {
             // Käsialueita vastaan taulukon equity ei päde (se on vs.
@@ -1153,7 +1161,7 @@ document.addEventListener('DOMContentLoaded', () => {
             // mitään. Sija kertoo silti käden vahvuuden kaikkiin käsiin
             // nähden - näytetään ilmoituksessa selvästi merkittynä.
             showNotice(t('sim.rangeNoteRank', {
-                list: rangeList, rank: rankText, classes: fmt(data.handClasses)
+                list: rangeList, rank: rankText, classes: fmt(data.handClasses), top
             }));
             return;
         }
@@ -1163,11 +1171,11 @@ document.addEventListener('DOMContentLoaded', () => {
         if (el) el.textContent = `${data.equity.toFixed(2)}%`;
         showNotice(data.exact
             ? t('sim.preflopExact', {
-                equity: data.equity.toFixed(4), rank: rankText, classes: fmt(data.handClasses)
+                equity: data.equity.toFixed(4), rank: rankText, classes: fmt(data.handClasses), top
             })
             : t('sim.preflopHybrid', {
                 equity: data.equity.toFixed(4), se: data.standardError.toFixed(4),
-                rank: rankText, classes: fmt(data.handClasses)
+                rank: rankText, classes: fmt(data.handClasses), top
             }));
     }
 

@@ -176,6 +176,9 @@ function lookup(gameType, players, hand) {
         rankLow: row.rankLow,
         rankHigh: row.rankHigh,
         label: row.label || key,
+        // Kombopainotettu top-%: kuinka suuri osa komboista on vähintään
+        // yhtä hyviä (sama luku kuin rankingsivulla)
+        topPct: row.topPct,
         handClasses: table.handCount,
         source: table.meta.method || table.meta.scenario || null,
         players

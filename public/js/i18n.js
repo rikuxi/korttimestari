@@ -70,8 +70,8 @@ const I18N_CATALOGS = {
             '(selain ei ollut käytettävissä; pyydetty {requested} katkaistiin).',
         'sim.rank': 'sija {rank}',
         'sim.rankRange': 'sija ~{rank} (väli {low}–{high})',
-        'sim.preflopExact': 'Tarkka arvo esilasketusta taulukosta: {equity} % ({rank} / {classes} käsiluokasta).',
-        'sim.preflopHybrid': 'Esilaskettu arvo: {equity} % ± {se} ({rank} / {classes} käsiluokasta).',
+        'sim.preflopExact': 'Tarkka arvo esilasketusta taulukosta: {equity} % ({rank} / {classes} käsiluokasta, top {top}).',
+        'sim.preflopHybrid': 'Esilaskettu arvo: {equity} % ± {se} ({rank} / {classes} käsiluokasta, top {top}).',
         'sim.exactDone': 'Tarkka tulos laskettu: kaikki {n} jäljellä olevaa pöytää käytiin läpi.',
         // Vastustajien käsialueet (ranges.js)
         'sim.exactDoneRange': 'Tarkka tulos laskettu: {c} käsialueiden yhdistelmää × jäljellä olevat pöydät = {n} tapausta käytiin läpi.',
@@ -88,7 +88,7 @@ const I18N_CATALOGS = {
         'sim.rangeFetchFailed': 'Käsialueen haku epäonnistui.',
         'sim.rangeConflict': 'Valittuja käsialueita ei voi jakaa yhtä aikaa (liian kapeat alueet samoista käsistä).',
         'sim.rangeNote': 'Vastustajien käsialueet: {list}. Esilaskettua preflop-arvoa ei ole tälle asetelmalle.',
-        'sim.rangeNoteRank': 'Vastustajien käsialueet: {list}. Heron käsi: {rank} / {classes} käsiluokasta — ' +
+        'sim.rangeNoteRank': 'Vastustajien käsialueet: {list}. Heron käsi: {rank} / {classes} käsiluokasta, top {top} — ' +
             'HUOM: sija on ranking satunnaisia käsiä vastaan, ei valittua aluetta vastaan.',
 
         // Rankingsivu (rankings.js)
@@ -202,8 +202,8 @@ const I18N_CATALOGS = {
             '(the browser was unavailable; the requested {requested} was capped).',
         'sim.rank': 'rank {rank}',
         'sim.rankRange': 'rank ~{rank} (range {low}–{high})',
-        'sim.preflopExact': 'Exact value from the precomputed table: {equity} % ({rank} of {classes} hand classes).',
-        'sim.preflopHybrid': 'Precomputed value: {equity} % ± {se} ({rank} of {classes} hand classes).',
+        'sim.preflopExact': 'Exact value from the precomputed table: {equity} % ({rank} of {classes} hand classes, top {top}).',
+        'sim.preflopHybrid': 'Precomputed value: {equity} % ± {se} ({rank} of {classes} hand classes, top {top}).',
         'sim.exactDone': 'Exact result computed: all {n} remaining boards were enumerated.',
         'sim.exactDoneRange': 'Exact result computed: {c} range hand combinations × remaining boards = {n} cases enumerated.',
         'sim.rangeAll': 'All hands',
@@ -219,7 +219,7 @@ const I18N_CATALOGS = {
         'sim.rangeFetchFailed': 'Fetching the hand range failed.',
         'sim.rangeConflict': 'The selected hand ranges cannot all be dealt at once (too narrow, built from the same hands).',
         'sim.rangeNote': 'Opponent hand ranges: {list}. No precomputed preflop value exists for this setup.',
-        'sim.rangeNoteRank': "Opponent hand ranges: {list}. Hero's hand: {rank} of {classes} hand classes — " +
+        'sim.rangeNoteRank': "Opponent hand ranges: {list}. Hero's hand: {rank} of {classes} hand classes, top {top} — " +
             'NOTE: the rank is against random hands, not against the selected range.',
 
         'rk.searching': 'Searching…',

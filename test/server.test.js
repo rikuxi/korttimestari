@@ -280,6 +280,8 @@ test('/preflop palauttaa eksaktin arvon Omahan heads-upiin', async () => {
     // Eksaktissa taulukossa sija on naulattu: alue on [rank, rank]
     assert.strictEqual(data.rankLow, 6);
     assert.strictEqual(data.rankHigh, 6);
+    // Kombopainotettu top-%: sama luku kuin /rankings-rivillä (0 < top < 1 %)
+    assert.ok(data.topPct > 0 && data.topPct < 1, `topPct ${data.topPct}`);
 });
 
 test('/preflop kertoo sija-alueen kun keskivirhe ei naulaa sijaa', async () => {
