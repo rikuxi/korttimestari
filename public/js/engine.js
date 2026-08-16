@@ -358,6 +358,150 @@
 
     // --- Simulaatio --------------------------------------------------------
 
+    // --- Käsialueet ---------------------------------------------------------
+    //
+    // Range-pelaaja ("top X % käsistä") saa joka kierroksella satunnaisen
+    // käden äärellisestä käsijoukosta. Joukko tulee luokka-avaimina
+    // (Hold'em: 'AKs' | 'AKo' | 'AA', Omaha: edustajakäsi 'AsAhKsKh') ja
+    // laajennetaan tässä konkreettisiksi komboiksi, koska sisäsilmukassa ei
+    // kanonisoida mitään: käsi arvotaan valmiista listasta O(1)-ajassa.
+
+    // Binomikertoimet kombojen indeksointiin (colex-järjestys)
+    const BINOM = (() => {
+        const t = [];
+        for (let n = 0; n <= 52; n++) {
+            t.push(new Float64Array(6));
+            for (let k = 0; k <= 5; k++) t[n][k] = binomialSmall(n, k);
+        }
+        return t;
+    })();
+    function binomialSmall(n, k) {
+        if (k < 0 || k > n) return 0;
+        let r = 1;
+        for (let i = 0; i < k; i++) r = (r * (n - i)) / (i + 1);
+        return Math.round(r);
+    }
+
+    /** Nousevaan järjestykseen lajitellun kombon indeksi 0..C(52,k)-1 */
+    function comboIndex(cards, k) {
+        let idx = 0;
+        for (let i = 0; i < k; i++) idx += BINOM[cards[i]][i + 1];
+        return idx;
+    }
+
+    // Kaikki 24 väripermutaatiota (maa 0..3 -> maa)
+    const SUIT_PERMS = (() => {
+        const out = [];
+        const p = [0, 1, 2, 3];
+        const permute = (i) => {
+            if (i === 4) { out.push(p.slice()); return; }
+            for (let j = i; j < 4; j++) {
+                [p[i], p[j]] = [p[j], p[i]];
+                permute(i + 1);
+                [p[i], p[j]] = [p[j], p[i]];
+            }
+        };
+        permute(0);
+        return out;
+    })();
+
+    /**
+     * Laajentaa luokka-avaimet konkreettisiksi komboiksi.
+     *
+     * @param {string[]} keys - Hold'em: 'AA' | 'AKs' | 'AKo'; Omaha(5):
+     *   kanoninen edustajakäsi 'AsAhKsKh' (väri-isomorfian nojalla luokka =
+     *   kaikki 24 väripermutaatiota, duplikaatit pois)
+     * @param {number} cardsPerPlayer - 2, 4 tai 5
+     * @returns {Int32Array} - kombot peräkkäin, cardsPerPlayer korttia
+     *   kutakin, kortit nousevassa järjestyksessä
+     */
+    function expandRangeKeys(keys, cardsPerPlayer) {
+        const k = cardsPerPlayer;
+        const seen = new Uint8Array(BINOM[52][k]);
+        const out = [];
+        const combo = new Int32Array(k);
+        const push = () => {
+            // Lajittele nousevaan järjestykseen (k <= 5: lisäyslajittelu)
+            for (let i = 1; i < k; i++) {
+                const v = combo[i]; let j = i - 1;
+                while (j >= 0 && combo[j] > v) { combo[j + 1] = combo[j]; j--; }
+                combo[j + 1] = v;
+            }
+            for (let i = 1; i < k; i++) if (combo[i] === combo[i - 1]) return;  // sama kortti kahdesti
+            const ci = comboIndex(combo, k);
+            if (seen[ci]) return;
+            seen[ci] = 1;
+            for (let i = 0; i < k; i++) out.push(combo[i]);
+        };
+        for (const key of keys) {
+            if (typeof key !== 'string') continue;
+            if (k === 2) {
+                if (key.length < 2 || key.length > 3) continue;
+                const r1 = RANK_CHARS.indexOf(key[0]), r2 = RANK_CHARS.indexOf(key[1]);
+                if (r1 < 0 || r2 < 0) continue;
+                const suffix = key[2];
+                if (r1 === r2) {
+                    if (key.length !== 2) continue;
+                    for (let s = 0; s < 4; s++) for (let t = s + 1; t < 4; t++) {
+                        combo[0] = r1 * 4 + s; combo[1] = r1 * 4 + t; push();
+                    }
+                } else if (suffix === 's') {
+                    for (let s = 0; s < 4; s++) { combo[0] = r1 * 4 + s; combo[1] = r2 * 4 + s; push(); }
+                } else if (suffix === 'o') {
+                    for (let s = 0; s < 4; s++) for (let t = 0; t < 4; t++) {
+                        if (s === t) continue;
+                        combo[0] = r1 * 4 + s; combo[1] = r2 * 4 + t; push();
+                    }
+                }
+                continue;
+            }
+            if (key.length !== 2 * k) continue;
+            const base = new Int32Array(k);
+            let ok = true;
+            for (let i = 0; i < k; i++) {
+                const c = cardToInt(key.substr(2 * i, 2));
+                if (c < 0) { ok = false; break; }
+                base[i] = c;
+            }
+            if (!ok) continue;
+            for (const perm of SUIT_PERMS) {
+                for (let i = 0; i < k; i++) combo[i] = (base[i] & ~3) | perm[base[i] & 3];
+                push();
+            }
+        }
+        return Int32Array.from(out);
+    }
+
+    // Laajennus on Omaha5:llä kymmeniä tuhansia avaimia x 24 permutaatiota;
+    // pieni välimuisti tunnisteella säästää sen toistuvissa ajoissa
+    const rangeCache = new Map();
+    const RANGE_CACHE_MAX = 6;
+    function expandRangeCached(keys, cardsPerPlayer, id) {
+        if (!id) return expandRangeKeys(keys, cardsPerPlayer);
+        const cacheKey = cardsPerPlayer + ':' + id;
+        if (rangeCache.has(cacheKey)) {
+            const hit = rangeCache.get(cacheKey);
+            rangeCache.delete(cacheKey);
+            rangeCache.set(cacheKey, hit);
+            return hit;
+        }
+        const combos = expandRangeKeys(keys, cardsPerPlayer);
+        rangeCache.set(cacheKey, combos);
+        while (rangeCache.size > RANGE_CACHE_MAX) rangeCache.delete(rangeCache.keys().next().value);
+        return combos;
+    }
+
+    /** Alueen kombot, joissa ei ole yhtään kuollutta korttia */
+    function filterRange(combos, k, deadSet) {
+        const out = [];
+        for (let i = 0; i < combos.length; i += k) {
+            let ok = true;
+            for (let j = 0; j < k; j++) if (deadSet[combos[i + j]]) { ok = false; break; }
+            if (ok) for (let j = 0; j < k; j++) out.push(combos[i + j]);
+        }
+        return Int32Array.from(out);
+    }
+
     function cardsPerPlayerFor(gameType) {
         if (gameType === 'holdem') return 2;
         if (gameType === 'omaha5') return 5;
@@ -390,8 +534,10 @@
         const holePairs = HOLE_PAIRS[cardsPerPlayer];
 
         // Pelaajan tila: 0 = ei mukana, 1 = kiinteä käsi, 2 = arvotaan
+        // pakasta, 3 = arvotaan käsialueesta (rangeKeys)
         const state = new Int32Array(playerCount);
         const fixedHands = new Array(playerCount).fill(null);
+        const rangeKeysOf = new Array(playerCount).fill(null);
 
         const dead = [];
         for (let i = 0; i < playerCount; i++) {
@@ -401,6 +547,7 @@
                 const c = cardToInt(s);
                 if (c >= 0) cards.push(c);
             }
+            const hasRange = Array.isArray(p.rangeKeys) && p.rangeKeys.length > 0;
             const randomlyDealt = randomOpponents && i > 0 && !p.isFolded;
 
             if (!randomlyDealt) {
@@ -410,9 +557,11 @@
             }
 
             if (p.isFolded) state[i] = 0;
-            else if (randomlyDealt) state[i] = 2;
+            else if (randomlyDealt) state[i] = hasRange ? 3 : 2;
             else if (cards.length === cardsPerPlayer) { state[i] = 1; fixedHands[i] = Int32Array.from(cards); }
+            else if (hasRange) state[i] = 3;
             else state[i] = 0;  // vajaa käsi -> ei mukana
+            if (state[i] === 3) rangeKeysOf[i] = p.rangeKeys;
         }
 
         // Pöytäkortit
@@ -443,10 +592,27 @@
         const active = [];
         for (let i = 0; i < playerCount; i++) if (state[i] !== 0) active.push(i);
 
+        // Käsialueet: laajenna komboiksi ja pudota kiinteisiin kuolleisiin
+        // kortteihin törmäävät. Listan koko on sen jälkeen vakio koko ajon,
+        // mikä on eksaktin arvonnan edellytys (ks. runSimulation).
+        const rangePlayers = [];
+        const rangeLists = new Array(playerCount).fill(null);
+        for (let i = 0; i < playerCount; i++) {
+            if (state[i] !== 3) continue;
+            const p = playerHandsData[i];
+            const all = expandRangeCached(rangeKeysOf[i], cardsPerPlayer, p.rangeId);
+            const list = filterRange(all, cardsPerPlayer, deadSet);
+            if (list.length === 0) throw new Error('Range has no possible hands');
+            rangeLists[i] = list;
+            rangePlayers.push(i);
+        }
+        const rangeCards = rangePlayers.length * cardsPerPlayer;
+
         return {
             playerCount, cardsPerPlayer, isOmaha, isHiLo, holePairs,
             state, fixedHands, knownBoard, deck, deckLen,
-            boardNeeded, randomPlayers, need, active
+            boardNeeded, randomPlayers, need, active,
+            rangePlayers, rangeLists, rangeCards
         };
     }
 
@@ -466,13 +632,22 @@
         const {
             playerCount, cardsPerPlayer, isOmaha, isHiLo, holePairs,
             state, fixedHands, knownBoard, deck, deckLen,
-            boardNeeded, randomPlayers, need, active
+            boardNeeded, randomPlayers, need, active,
+            rangePlayers, rangeLists, rangeCards
         } = prepare(data);
 
         const winCounts = new Array(playerCount).fill(0);
         const tieCounts = new Array(playerCount).fill(0);
         const equitySums = new Array(playerCount).fill(0);
         const heroHandStats = {};
+        // Range-pelaajan käsi kirjoitetaan joka kierroksella tähän puskuriin,
+        // jolloin arviointi kohtelee sitä kuin kiinteää kättä
+        for (const i of rangePlayers) fixedHands[i] = new Int32Array(cardsPerPlayer);
+        const rangeCount = rangePlayers.length;
+        // Kortit, jotka ovat tällä kierroksella range-käsissä (pakka ei
+        // sisällä niitä valmiiksi, koska ne vaihtuvat joka kierros)
+        const used = new Uint8Array(52);
+        let rangeAttempts = 0;
         // Neliösumma keskivirhettä varten: kierrokset ovat riippumattomia,
         // joten osuuksien otosvarianssi antaa suoraan estimaatin tarkkuudesta
         const equitySq = new Array(playerCount).fill(0);
@@ -500,7 +675,7 @@
         if (active.length === 0) {
             throw new Error('No active players with cards');
         }
-        if (need > deckLen) {
+        if (need + rangeCards > deckLen) {
             throw new Error('Not enough cards in deck');
         }
         if (active.length === 1) {
@@ -529,10 +704,55 @@
         const knownBoardLen = knownBoard.length;
 
         for (let sim = 0; sim < simulationCount; sim++) {
-            // Osittainen Fisher-Yates: sekoitetaan vain tarvittavat kortit
-            for (let i = 0; i < need; i++) {
-                const j = i + Math.floor(Math.random() * (deckLen - i));
-                const t = deck[i]; deck[i] = deck[j]; deck[j] = t;
+            if (rangeCount > 0) {
+                // Range-kädet ensin, riippumattomasti kukin omasta listastaan;
+                // jos kaksi kättä jakaa kortin, arvotaan kaikki uudestaan.
+                // Ehdotus on tasainen listojen tulojoukolla ja hylkäys
+                // ehdollistaa erillisiin, joten yhteisjakauma on täsmälleen
+                // tasainen kaikkien sallittujen käsiyhdistelmien yli - sama
+                // kuin "kortit jaettiin ja jokainen sattui saamaan alueensa
+                // käden". Peräkkäinen arvonta (toinen välttäen ensimmäisen
+                // kortit) olisi hienovaraisesti harhainen blokkerien takia.
+                //
+                // Listat suodatettiin kiinteistä kuolleista korteista jo
+                // prepare():ssa, ja pakka jaetaan vasta tämän jälkeen: näin
+                // range-käsien lukumäärä ei riipu pöydästä eikä muista
+                // arvottavista käsistä.
+                for (;;) {
+                    used.fill(0);
+                    let clash = false;
+                    for (let r = 0; r < rangeCount && !clash; r++) {
+                        const list = rangeLists[rangePlayers[r]];
+                        const hand = fixedHands[rangePlayers[r]];
+                        const off = Math.floor(Math.random() * (list.length / cardsPerPlayer)) * cardsPerPlayer;
+                        for (let k = 0; k < cardsPerPlayer; k++) {
+                            const c = list[off + k];
+                            if (used[c]) { clash = true; break; }
+                            used[c] = 1;
+                            hand[k] = c;
+                        }
+                    }
+                    if (!clash) break;
+                    // Alueet voivat olla keskenään mahdottomat (esim. viisi
+                    // "pelkkä AA" -aluetta): älä jää ikuiseen silmukkaan
+                    if (++rangeAttempts > 20000 * (sim + 1)) {
+                        throw new Error('Ranges conflict: no disjoint hands found');
+                    }
+                }
+                // Osittainen Fisher-Yates ohittaen range-käsien kortit: kortti
+                // hylätään ja arvotaan uusi, jolloin valinta on tasainen
+                // jäljellä olevien vapaiden korttien yli
+                for (let i = 0; i < need; i++) {
+                    let j;
+                    do { j = i + Math.floor(Math.random() * (deckLen - i)); } while (used[deck[j]]);
+                    const t = deck[i]; deck[i] = deck[j]; deck[j] = t;
+                }
+            } else {
+                // Osittainen Fisher-Yates: sekoitetaan vain tarvittavat kortit
+                for (let i = 0; i < need; i++) {
+                    const j = i + Math.floor(Math.random() * (deckLen - i));
+                    const t = deck[i]; deck[i] = deck[j]; deck[j] = t;
+                }
             }
 
             for (let b = 0; b < boardNeeded; b++) board[knownBoardLen + b] = deck[boardStart + b];
@@ -714,7 +934,15 @@
             // Tuntemattomia käsiä ei voi enumeroida - näihin on esilasketut taulukot
             return { feasible: false, reason: 'random-opponents', boards: 0, estimatedSeconds: 0 };
         }
-        const boards = binomial(p.deckLen, p.boardNeeded);
+        // Käsialueet ovat äärellisiä: enumeroidaan alueiden erilliset
+        // käsiyhdistelmät x pöydät. Yhdistelmien tulojoukko voi olla valtava
+        // (kaksi Omaha-aluetta = miljardeja), joten sitä ei edes lasketa
+        // tarkasti jos yläraja ylittää budjetin.
+        const rangeCombos = countRangeCombos(p, RANGE_COMBO_CAP);
+        if (rangeCombos < 0) {
+            return { feasible: false, reason: 'range-too-large', boards: 0, estimatedSeconds: Infinity };
+        }
+        const boards = binomial(p.deckLen - p.rangeCards, p.boardNeeded) * rangeCombos;
         const perBoard = p.active.length * (!p.isOmaha ? COST_HOLDEM
             : p.isHiLo ? COST_OMAHA_HILO
                 : (p.cardsPerPlayer === 5 ? COST_OMAHA5 : COST_OMAHA));
@@ -722,8 +950,59 @@
             feasible: p.active.length >= 2,
             reason: p.active.length < 2 ? 'single-player' : null,
             boards,
+            rangeCombos,
             estimatedSeconds: boards * perBoard
         };
+    }
+
+    // Enemmän kuin näin monta alueiden käsiyhdistelmää ei enumeroida
+    // (10 s budjetilla Hold'em-riverkin olisi ~300 M eval7:ää)
+    const RANGE_COMBO_CAP = 5e6;
+
+    /**
+     * Käy läpi range-pelaajien käsiyhdistelmät (kunkin listan tulojoukko),
+     * ohittaa yhdistelmät joissa kaksi kättä jakaa kortin, ja kutsuu cb:tä
+     * kun kädet on kirjoitettu fixedHands-puskureihin ja käytetyt kortit
+     * used-maskiin. Palauttaa yhdistelmien määrän.
+     */
+    function forEachRangeCombo(p, used, cb) {
+        const { rangePlayers, rangeLists, cardsPerPlayer: k, fixedHands } = p;
+        const n = rangePlayers.length;
+        if (n === 0) { used.fill(0); cb(); return 1; }
+        const sizes = rangePlayers.map(i => rangeLists[i].length / k);
+        const pos = new Int32Array(n);
+        let count = 0;
+        for (;;) {
+            used.fill(0);
+            let clash = false;
+            for (let r = 0; r < n && !clash; r++) {
+                const list = rangeLists[rangePlayers[r]];
+                const hand = fixedHands[rangePlayers[r]];
+                const off = pos[r] * k;
+                for (let j = 0; j < k; j++) {
+                    const c = list[off + j];
+                    if (used[c]) { clash = true; break; }
+                    used[c] = 1;
+                    hand[j] = c;
+                }
+            }
+            if (!clash) { count++; if (cb) cb(); }
+            let r = n - 1;
+            while (r >= 0 && pos[r] === sizes[r] - 1) { pos[r] = 0; r--; }
+            if (r < 0) break;
+            pos[r]++;
+        }
+        return count;
+    }
+
+    /** Erillisten range-yhdistelmien määrä, tai -1 jos tulojoukko ylittää capin */
+    function countRangeCombos(p, cap) {
+        if (p.rangePlayers.length === 0) return 1;
+        let product = 1;
+        for (const i of p.rangePlayers) product *= p.rangeLists[i].length / p.cardsPerPlayer;
+        if (product > cap) return -1;
+        for (const i of p.rangePlayers) p.fixedHands[i] = new Int32Array(p.cardsPerPlayer);
+        return forEachRangeCombo(p, new Uint8Array(52), null);
     }
 
     /**
@@ -733,13 +1012,17 @@
      * @param {function(number)} [onProgress]
      */
     function enumerateExact(data, onProgress) {
+        const p = prepare(data);
         const {
-            playerCount, isOmaha, isHiLo, holePairs,
-            state, fixedHands, knownBoard, deck, deckLen,
-            boardNeeded, randomPlayers, active
-        } = prepare(data);
+            playerCount, cardsPerPlayer, isOmaha, isHiLo, holePairs,
+            state, fixedHands, knownBoard, deck: fullDeck, deckLen: fullDeckLen,
+            boardNeeded, randomPlayers, active, rangePlayers, rangeCards
+        } = p;
 
         if (randomPlayers > 0 || active.length === 0) return null;
+        for (const i of rangePlayers) fixedHands[i] = new Int32Array(cardsPerPlayer);
+        const rangeCombos = countRangeCombos(p, RANGE_COMBO_CAP);
+        if (rangeCombos < 0) return null;
 
         const winCounts = new Array(playerCount).fill(0);
         const tieCounts = new Array(playerCount).fill(0);
@@ -758,7 +1041,11 @@
         } : null;
         const heroHandStats = {};
 
-        const totalBoards = binomial(deckLen, boardNeeded);
+        // Pöytiä per range-yhdistelmä x yhdistelmät. Kaikilla yhdistelmillä
+        // on yhtä monta pöytää, joten nimittäjä on tulo.
+        const deckLen = fullDeckLen - rangeCards;
+        const boardsPerCombo = binomial(deckLen, boardNeeded);
+        const totalBoards = boardsPerCombo * rangeCombos;
 
         if (active.length === 1) {
             // Ei pöytiä käytävänä läpi -> hi/lo-erittelyä ei ole olemassa
@@ -777,94 +1064,105 @@
         const knownBoardLen = knownBoard.length;
 
         const idx = new Int32Array(boardNeeded);
-        for (let i = 0; i < boardNeeded; i++) idx[i] = i;
 
         const progressStep = Math.max(1, Math.floor(totalBoards / 100));
         let done = 0;
 
-        for (;;) {
-            for (let b = 0; b < boardNeeded; b++) board[knownBoardLen + b] = deck[idx[b]];
-            let lowPossible = false;
-            if (isOmaha) {
-                expandBoardTriples(board, boardTriples);
-                if (isHiLo) lowPossible = expandBoardLowTriples(board, lowTriples);
-            }
+        // Pakka ilman kulloisenkin range-yhdistelmän kortteja
+        const deck = new Int32Array(deckLen);
+        const used = new Uint8Array(52);
 
-            let maxValue = -1, winnerCount = 0;
-            let loMin = NO_LOW, loWinnerCount = 0;
-            for (let a = 0; a < active.length; a++) {
-                const i = active[a];
-                const value = isOmaha
-                    ? evalOmahaFast(fixedHands[i], holePairs, boardTriples)
-                    : eval7(fixedHands[i][0], fixedHands[i][1], board[0], board[1], board[2], board[3], board[4]);
-                values[i] = value;
+        forEachRangeCombo(p, used, () => {
+            let dn = 0;
+            for (let i = 0; i < fullDeckLen; i++) if (!used[fullDeck[i]]) deck[dn++] = fullDeck[i];
+            for (let i = 0; i < boardNeeded; i++) idx[i] = i;
+
+            for (;;) {
+                for (let b = 0; b < boardNeeded; b++) board[knownBoardLen + b] = deck[idx[b]];
+                let lowPossible = false;
+                if (isOmaha) {
+                    expandBoardTriples(board, boardTriples);
+                    if (isHiLo) lowPossible = expandBoardLowTriples(board, lowTriples);
+                }
+
+                let maxValue = -1, winnerCount = 0;
+                let loMin = NO_LOW, loWinnerCount = 0;
+                for (let a = 0; a < active.length; a++) {
+                    const i = active[a];
+                    const value = isOmaha
+                        ? evalOmahaFast(fixedHands[i], holePairs, boardTriples)
+                        : eval7(fixedHands[i][0], fixedHands[i][1], board[0], board[1], board[2], board[3], board[4]);
+                    values[i] = value;
+                    if (isHiLo) {
+                        const lo = lowPossible ? evalOmahaLowFast(fixedHands[i], holePairs, lowTriples) : NO_LOW;
+                        loValues[i] = lo;
+                        if (lo < loMin) { loMin = lo; loWinnerCount = 1; }
+                        else if (lo === loMin && loMin !== NO_LOW) loWinnerCount++;
+                    }
+                    if (value > maxValue) { maxValue = value; winnerCount = 1; }
+                    else if (value === maxValue) winnerCount++;
+                }
+
+                if (state[0] !== 0) {
+                    const name = CATEGORY_NAMES[categoryOf(values[0])];
+                    heroHandStats[name] = (heroHandStats[name] || 0) + 1;
+                }
+
                 if (isHiLo) {
-                    const lo = lowPossible ? evalOmahaLowFast(fixedHands[i], holePairs, lowTriples) : NO_LOW;
-                    loValues[i] = lo;
-                    if (lo < loMin) { loMin = lo; loWinnerCount = 1; }
-                    else if (lo === loMin && loMin !== NO_LOW) loWinnerCount++;
-                }
-                if (value > maxValue) { maxValue = value; winnerCount = 1; }
-                else if (value === maxValue) winnerCount++;
-            }
-
-            if (state[0] !== 0) {
-                const name = CATEGORY_NAMES[categoryOf(values[0])];
-                heroHandStats[name] = (heroHandStats[name] || 0) + 1;
-            }
-
-            if (isHiLo) {
-                // Osoittajat kokonaislukuina yksikössä 1/LCM_SHARE:
-                // puolikas potti on LCM_SHARE/2, ja sekin jakautuu tasan
-                // korkeintaan 10 voittajalle (5040/2/k on kokonaisluku)
-                if (loWinnerCount === 0) hilo.noLowRounds++;
-                if (state[0] !== 0 && loValues[0] !== NO_LOW) hilo.heroLowMade++;
-                for (let a = 0; a < active.length; a++) {
-                    const i = active[a];
-                    let hiPart = 0, loPart = 0;
-                    if (values[i] === maxValue) {
-                        hiPart = loWinnerCount === 0
-                            ? LCM_SHARE / winnerCount
-                            : (LCM_SHARE / 2) / winnerCount;
-                        if (winnerCount === 1) hilo.hiWins[i]++; else hilo.hiTies[i]++;
+                    // Osoittajat kokonaislukuina yksikössä 1/LCM_SHARE:
+                    // puolikas potti on LCM_SHARE/2, ja sekin jakautuu tasan
+                    // korkeintaan 10 voittajalle (5040/2/k on kokonaisluku)
+                    if (loWinnerCount === 0) hilo.noLowRounds++;
+                    if (state[0] !== 0 && loValues[0] !== NO_LOW) hilo.heroLowMade++;
+                    for (let a = 0; a < active.length; a++) {
+                        const i = active[a];
+                        let hiPart = 0, loPart = 0;
+                        if (values[i] === maxValue) {
+                            hiPart = loWinnerCount === 0
+                                ? LCM_SHARE / winnerCount
+                                : (LCM_SHARE / 2) / winnerCount;
+                            if (winnerCount === 1) hilo.hiWins[i]++; else hilo.hiTies[i]++;
+                        }
+                        if (loWinnerCount > 0 && loValues[i] === loMin) {
+                            loPart = (LCM_SHARE / 2) / loWinnerCount;
+                            if (loWinnerCount === 1) hilo.loWins[i]++; else hilo.loTies[i]++;
+                        }
+                        const share = hiPart + loPart;
+                        if (share === LCM_SHARE) winCounts[i]++;
+                        else if (share > 0) tieCounts[i]++;
+                        hilo.hiNumerators[i] += hiPart;
+                        hilo.loNumerators[i] += loPart;
+                        equityNumerators[i] += share;
                     }
-                    if (loWinnerCount > 0 && loValues[i] === loMin) {
-                        loPart = (LCM_SHARE / 2) / loWinnerCount;
-                        if (loWinnerCount === 1) hilo.loWins[i]++; else hilo.loTies[i]++;
-                    }
-                    const share = hiPart + loPart;
-                    if (share === LCM_SHARE) winCounts[i]++;
-                    else if (share > 0) tieCounts[i]++;
-                    hilo.hiNumerators[i] += hiPart;
-                    hilo.loNumerators[i] += loPart;
-                    equityNumerators[i] += share;
-                }
-            } else {
-                // Osoittajat pidetään kokonaislukuina: jaetaan vasta lopuksi
-                const scaled = LCM_SHARE / winnerCount;
-                for (let a = 0; a < active.length; a++) {
-                    const i = active[a];
-                    if (values[i] === maxValue) {
-                        if (winnerCount === 1) winCounts[i]++;
-                        else tieCounts[i]++;
-                        equityNumerators[i] += scaled;
+                } else {
+                    // Osoittajat pidetään kokonaislukuina: jaetaan vasta lopuksi
+                    const scaled = LCM_SHARE / winnerCount;
+                    for (let a = 0; a < active.length; a++) {
+                        const i = active[a];
+                        if (values[i] === maxValue) {
+                            if (winnerCount === 1) winCounts[i]++;
+                            else tieCounts[i]++;
+                            equityNumerators[i] += scaled;
+                        }
                     }
                 }
+
+                done++;
+                if (onProgress && done % progressStep === 0) onProgress((done / totalBoards) * 100);
+
+                // Seuraava pöytäyhdistelmä
+                let i = boardNeeded - 1;
+                while (i >= 0 && idx[i] === deckLen - boardNeeded + i) i--;
+                if (i < 0) break;
+                idx[i]++;
+                for (let j = i + 1; j < boardNeeded; j++) idx[j] = idx[j - 1] + 1;
             }
+        });
 
-            done++;
-            if (onProgress && done % progressStep === 0) onProgress((done / totalBoards) * 100);
-
-            // Seuraava pöytäyhdistelmä
-            let i = boardNeeded - 1;
-            while (i >= 0 && idx[i] === deckLen - boardNeeded + i) i--;
-            if (i < 0) break;
-            idx[i]++;
-            for (let j = i + 1; j < boardNeeded; j++) idx[j] = idx[j - 1] + 1;
-        }
-
-        return exactResult(winCounts, tieCounts, equityNumerators, totalBoards,
+        const result = exactResult(winCounts, tieCounts, equityNumerators, totalBoards,
             heroHandStats, hilo);
+        result.rangeCombos = rangeCombos;
+        return result;
     }
 
     // Pienin yhteinen jaettava, jotta osuudet pysyvät kokonaislukuina eikä
@@ -911,7 +1209,8 @@
         eval5, eval7, evalOmaha,
         evalOmahaLow, NO_LOW,
         HOLE_PAIRS, CATEGORY_NAMES,
-        runSimulation, enumerateExact, exactPlan, binomial
+        runSimulation, enumerateExact, exactPlan, binomial,
+        expandRangeKeys, comboIndex
     };
 
     global.PokerEngine = PokerEngine;

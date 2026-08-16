@@ -476,3 +476,143 @@ test('keskivirhe kattaa todellisen virheen eksaktiin nähden', () => {
     }
     assert.ok(within >= 15, `${within}/${runs} osui kahden keskivirheen sisään`);
 });
+
+// --- Käsialueet (rangeKeys) --------------------------------------------
+
+test('expandRangeKeys: luokkien kombomäärät ja duplikaattien poisto', () => {
+    assert.strictEqual(E.expandRangeKeys(['AA'], 2).length / 2, 6);
+    assert.strictEqual(E.expandRangeKeys(['AKs'], 2).length / 2, 4);
+    assert.strictEqual(E.expandRangeKeys(['AKo'], 2).length / 2, 12);
+    assert.strictEqual(E.expandRangeKeys(['AA', 'AA', 'AKs'], 2).length / 2, 10);
+    // Omaha: 24 väripermutaatiota, mutta symmetriset kädet tuottavat vähemmän
+    assert.strictEqual(E.expandRangeKeys(['AsAhKsKh'], 4).length / 4, 6);
+    assert.strictEqual(E.expandRangeKeys(['AsAhAdAc'], 4).length / 4, 1);
+    assert.strictEqual(E.expandRangeKeys(['AsKhQdJc'], 4).length / 4, 24);
+    // Kelvottomat avaimet ohitetaan hiljaa
+    assert.strictEqual(E.expandRangeKeys(['XX', 'AK', 'AsAh'], 2).length, 0);
+});
+
+test('expandRangeKeys: kaikki luokat kattavat täsmälleen kaikki kombot', () => {
+    const { enumerateHoldemCanonical, enumerateOmahaCanonical } = require('../canonical');
+    const hk = enumerateHoldemCanonical().map(c => c.key);
+    assert.strictEqual(E.expandRangeKeys(hk, 2).length / 2, 1326);
+    const ok = enumerateOmahaCanonical();
+    const combos = E.expandRangeKeys(ok.map(c => c.key), 4);
+    assert.strictEqual(combos.length / 4, 270725);
+    // Kombot ovat nousevassa järjestyksessä ja indeksit yksikäsitteisiä
+    const seen = new Set();
+    for (let i = 0; i < combos.length; i += 4) {
+        assert.ok(combos[i] < combos[i + 1] && combos[i + 1] < combos[i + 2] && combos[i + 2] < combos[i + 3]);
+        seen.add(E.comboIndex(combos.subarray(i, i + 4), 4));
+    }
+    assert.strictEqual(seen.size, 270725);
+});
+
+test('range: enumerateExact ja Monte Carlo antavat saman vastauksen', () => {
+    const data = {
+        gameType: 'holdem', simulationCount: 100000, randomOpponents: true,
+        playerHandsData: [
+            { hand: ['As', 'Ks'], isFolded: false },
+            { hand: [], isFolded: false, rangeKeys: ['AA', 'KK', 'QQ', 'JJ', 'TT', 'AKs', 'AKo', 'AQs', 'KQs'] }
+        ],
+        communityCards: { flop: ['2h', '7d', 'Jc'], turn: null, river: null }
+    };
+    const exact = E.enumerateExact(data);
+    // AsKs ja Jc kuolleina: AA 3, KK 3, QQ 6, JJ 3, TT 6, AKs 3, AKo 6, AQs 3, KQs 3
+    assert.strictEqual(exact.rangeCombos, 36);
+    assert.strictEqual(exact.boards, 36 * E.binomial(45, 2));
+    const plan = E.exactPlan(data);
+    assert.strictEqual(plan.feasible, true);
+    assert.strictEqual(plan.rangeCombos, 36);
+    const mc = E.runSimulation(data);
+    const diff = Math.abs(mc.equityPercentages[0] - exact.equityPercentages[0]);
+    assert.ok(diff < 4 * mc.standardErrors[0], `ero ${diff} > 4 se`);
+});
+
+test('range: kahden alueen yhteisjakauma on tasainen (MC = eksakti)', () => {
+    // Päällekkäiset alueet: blokkerit tekisivät peräkkäisestä arvonnasta
+    // harhaisen. Riippumaton arvonta + hylkäys antaa saman kuin enumerointi.
+    const data = {
+        gameType: 'holdem', simulationCount: 300000, randomOpponents: true,
+        playerHandsData: [
+            { hand: ['Qs', 'Qh'], isFolded: false },
+            { hand: [], isFolded: false, rangeKeys: ['AA', 'KK', 'AKs'] },
+            { hand: [], isFolded: false, rangeKeys: ['AA', 'KK', 'AKo', '22'] }
+        ],
+        communityCards: { flop: ['2h', '7d', 'Jc'], turn: '3c', river: '9s' }
+    };
+    const exact = E.enumerateExact(data);
+    const mc = E.runSimulation(data);
+    for (let i = 0; i < 3; i++) {
+        const diff = Math.abs(mc.equityPercentages[i] - exact.equityPercentages[i]);
+        assert.ok(diff < 4 * mc.standardErrors[i] + 1e-9, `pelaaja ${i}: ero ${diff}`);
+    }
+});
+
+test('range: 100 % alue antaa saman kuin satunnaiset vastustajat', () => {
+    const { enumerateHoldemCanonical } = require('../canonical');
+    const keys = enumerateHoldemCanonical().map(c => c.key);
+    const base = {
+        gameType: 'holdem', simulationCount: 200000, randomOpponents: true,
+        communityCards: { flop: ['2h', '7d', 'Jc'], turn: '3c', river: null }
+    };
+    const rnd = E.runSimulation({ ...base, playerHandsData: [{ hand: ['As', 'Ks'], isFolded: false }, { hand: [], isFolded: false }] });
+    const rng = E.runSimulation({ ...base, playerHandsData: [{ hand: ['As', 'Ks'], isFolded: false }, { hand: [], isFolded: false, rangeKeys: keys }] });
+    const diff = Math.abs(rnd.equityPercentages[0] - rng.equityPercentages[0]);
+    assert.ok(diff < 4 * Math.hypot(rnd.standardErrors[0], rng.standardErrors[0]), `ero ${diff}`);
+});
+
+test('range: sekoitus range-, satunnais- ja kiinteitä vastustajia Omahassa', () => {
+    const data = {
+        gameType: 'omaha', simulationCount: 20000, randomOpponents: true,
+        playerHandsData: [
+            { hand: ['As', 'Ad', 'Ks', 'Kd'], isFolded: false },
+            { hand: [], isFolded: false, rangeKeys: ['AsAhKsKh', 'AsAhQsQh', 'AsKhQdJc'] },
+            { hand: [], isFolded: false },
+            { hand: ['2c', '3c', '4c', '5c'], isFolded: true }
+        ],
+        communityCards: empty
+    };
+    const r = E.runSimulation(data);
+    assert.strictEqual(r.equityPercentages.length, 4);
+    assert.strictEqual(r.equityPercentages[3], 0);
+    const total = r.equityPercentages.reduce((a, b) => a + b, 0);
+    assert.ok(Math.abs(total - 100) < 1e-6);
+    // Range-pelaaja on aina läsnä: keskivirhe > 0
+    assert.ok(r.standardErrors[1] > 0);
+});
+
+test('range: mahdoton alue heittää virheen', () => {
+    const data = {
+        gameType: 'holdem', simulationCount: 1000, randomOpponents: true,
+        playerHandsData: [
+            { hand: ['As', 'Ah'], isFolded: false },
+            { hand: [], isFolded: false, rangeKeys: ['AA'] },
+            { hand: [], isFolded: false, rangeKeys: ['AA'] }
+        ],
+        communityCards: empty
+    };
+    // AsAh kuollut -> AA:sta jää vain AdAc, kahdelle pelaajalle ei riitä
+    assert.throws(() => E.runSimulation(data), /Ranges conflict/);
+    // Valitut vastustajat -tila: kiinteä AdAc + range-pelaaja ilman kortteja
+    const dead = { ...data, randomOpponents: false, playerHandsData: [{ hand: ['As', 'Ah'], isFolded: false }, { hand: ['Ad', 'Ac'], isFolded: false }, { hand: [], isFolded: false, rangeKeys: ['AA'] }] };
+    assert.throws(() => E.runSimulation(dead), /no possible hands/);
+});
+
+test('exactPlan: liian suuri alueiden tulojoukko ei ole enumeroitavissa', () => {
+    const { enumerateOmahaCanonical } = require('../canonical');
+    const keys = enumerateOmahaCanonical().slice(0, 4000).map(c => c.key);
+    const data = {
+        gameType: 'omaha', simulationCount: 10, randomOpponents: true,
+        playerHandsData: [
+            { hand: ['As', 'Ad', 'Ks', 'Kd'], isFolded: false },
+            { hand: [], isFolded: false, rangeKeys: keys },
+            { hand: [], isFolded: false, rangeKeys: keys }
+        ],
+        communityCards: { flop: ['2h', '7d', 'Jc'], turn: '3c', river: '9s' }
+    };
+    const plan = E.exactPlan(data);
+    assert.strictEqual(plan.feasible, false);
+    assert.strictEqual(plan.reason, 'range-too-large');
+    assert.strictEqual(E.enumerateExact(data), null);
+});
