@@ -6,8 +6,9 @@
 *Read this in English: [README.en.md](README.en.md)*
 
 Selainpohjainen työkalu pokerikäsien voittotodennäköisyyksien laskentaan
-Monte Carlo -simulaatiolla. Tukee Texas Hold'emia, Omahaa (4 korttia) ja
-Omaha5:tä (5 korttia), 2–10 pelaajaa (Omahat enintään 9).
+Monte Carlo -simulaatiolla. Tukee Texas Hold'emia, Omahaa (4 korttia),
+Omaha5:tä (5 korttia) ja Omaha Hi/Lo:ta (8-or-better, jaettu potti),
+2–10 pelaajaa (Omahat enintään 9).
 
 Käyttöliittymä on kaksikielinen: suomi sivuston juuressa, englanti
 `/en/`-polussa.
@@ -22,9 +23,12 @@ tässä repossa avoimena datana ([data/](data/), CC BY 4.0):
 | Texas Hold'em | 169 | 2–10 (heads-up eksakti) |
 | Omaha | 16 432 | 2–9 (heads-up eksakti) |
 | Omaha5 (5 korttia) | 134 459 | 2–9 |
+| Omaha Hi/Lo (8-or-better) | 16 432 | 2–6 (heads-up eksakti) |
 
 Taulukot kattavat jokaisen käsiluokan jokaisella pelaajamäärällä —
-equity-arvoineen, keskivirheineen ja sijaepävarmuuksineen. Menetelmät ja
+equity-arvoineen, keskivirheineen ja sijaepävarmuuksineen. Hi/Lo-taulukoissa
+on lisäksi hi- ja low-osuudet, puoliskojen voitto- ja tasapelitaajuudet
+sekä scoop-, osapotti-, kvartautumis- ja low-taajuudet. Menetelmät ja
 virherajat on dokumentoitu tiedostossa [data/README.md](data/README.md).
 
 ## Ominaisuudet
@@ -34,8 +38,18 @@ virherajat on dokumentoitu tiedostossa [data/README.md](data/README.md).
 - Heron käsijakauma (pari, väri, suora, ...) palkkikaaviona
 - **Valitut vastustajat**: kaikkien pelaajien kortit tunnetaan
 - **Tuntemattomat vastustajat**: vain heron kortit tunnetaan; vastustajille
-  arvotaan uudet kädet joka jaossa (vastustajien prosentteja ei näytetä,
-  koska ne eivät kerro mitään)
+  arvotaan uudet kädet joka jaossa. Vastustajien luvut näytetään:
+  satunnainen käsi on käsialueen 100 % ja perustaso, johon tiukemmat
+  alueet vertautuvat
+- **Esilaskettu preflop-arvo**: tuntemattomia vastustajia vastaan ilman
+  pöytäkortteja heron tarkka tai hybridilaskettu equity haetaan taulukosta
+  simulaation rinnalle, sija ja top-% ilmoitukseen; kun kaikki kädet tai
+  alueet tunnetaan ja tapauksia on vähän, tulos enumeroidaan tarkasti
+- **Omaha Hi/Lo (8-or-better)**: potti jaetaan parhaan hi-käden ja parhaan
+  low-käden kesken (low vaatii viisi eri arvoa kahdeksikosta alaspäin; ilman
+  low'ta hi vie koko potin). Tulokset erittelevät hi- ja low-osuudet sekä
+  puoliskojen voitto- ja tasapelitaajuudet, ja heron low-tilastot kerrotaan
+  erikseen
 - **Käsialueet**: tuntemattomalle vastustajalle voi antaa alueen "top X %"
   pelaajamäärän preflop-rankingista, jokaiselle omansa (liukusäädin
   korttien päällä, Hold'emissa 13×13-chart ponnahdusikkunassa). Useiden
@@ -48,7 +62,9 @@ virherajat on dokumentoitu tiedostossa [data/README.md](data/README.md).
   ja oma valinta muistetaan selaimessa
 - **Rankingsivu** (`/rankingit`): selaa esilaskettuja
   preflop-rankingeja tai hae osittaiskädellä; sijat epävarmuusväleineen,
-  equityt keskivirheineen, top-X %:n aluechart ja CSV-lataus
+  equityt keskivirheineen, top-X %:n aluechart ja CSV-lataus. Hi/Lo:ssa
+  hi- ja low-sarakkeet sekä käden detaljipaneelissa puoliskojen taajuudet
+  ja potinosuuden jakauma
 
 ## Käynnistys
 
@@ -64,7 +80,7 @@ npm test           # testit (Noden sisäänrakennettu test runner)
 | Muuttuja | Oletus | Selitys |
 |---|---|---|
 | `PORT` | `3002` | Palvelimen portti |
-| `PREFLOP_CACHE_TABLES` | `10` | Taulukkovälimuistin budjetti Omaha5-kokoisina taulukoina (~40 MB heapia kpl). Oletus pitää kaikki 25 taulukkoa muistissa (mitattu ~600 MB RSS lämmityksen jälkeen). Muistiahtaassa ympäristössä rajaa voi pudottaa; alle 8:lla Omaha5:n käsivertailu alkaa lukea levyltä. |
+| `PREFLOP_CACHE_TABLES` | `10` | Taulukkovälimuistin budjetti Omaha5-kokoisina taulukoina (~40 MB heapia kpl). Oletus pitää kaikki 30 taulukkoa muistissa (mitattu ~700 MB RSS lämmityksen jälkeen). Muistiahtaassa ympäristössä rajaa voi pudottaa; alle 8:lla Omaha5:n käsivertailu alkaa lukea levyltä. |
 | `RANGE_CACHE_MB` | `96` | Laajennettujen käsialueiden (`rangePct`) välimuistin tavubudjetti megatavuina. Worker laajentaa alueen kerran jaettuun muistiin ja seuraavat `/simulate`-pyynnöt käyttävät sitä sellaisenaan (Omaha5 top 30 %: 386 ms → 98 ms). Yksi merkintä on enintään ~47 MB (Omaha5 top 90 %); `0` poistaa välimuistin käytöstä. |
 | `PREFLOP_PRELOAD` | päällä | Taulukoiden esilämmitys käynnistyksessä, ettei ensimmäinen kävijä maksa synkronisia levylatauksia. `off` poistaa käytöstä — käytä yhdessä matalan `PREFLOP_CACHE_TABLES`-arvon kanssa. |
 | `TRUST_PROXY_IPS` | Cloudflaren alueet | Luotetut käänteisproxyt: pilkulla tai välilyönnillä eroteltu lista osoitteita ja CIDR-alueita. Arvo `off` jättää `X-Forwarded-For`-otsakkeen huomiotta — käytä sitä kun palvelu **ei** ole proxyn takana, koska silloin otsake on väärennettävissä. Kelvoton arvo kaataa käynnistyksen. |
@@ -73,14 +89,22 @@ npm test           # testit (Noden sisäänrakennettu test runner)
 
 | Tiedosto | Rooli |
 |---|---|
-| `public/js/engine.js` | Laskentamoottori — **sama tiedosto** ajetaan selaimessa ja palvelimella |
-| `public/js/script.js` | Käyttöliittymä |
+| `public/js/games.js` | Pelimuotorekisteri (kortit per pelaaja, hi/lo, maksimipelaajat, avainkuvio, taulukkopäätteet, kustannukset) — ladataan selaimessa ja palvelimella ennen moottoria |
+| `public/js/engine.js` | Laskentamoottori — **sama tiedosto** ajetaan selaimessa ja palvelimella; Monte Carlo, tarkka enumerointi, käsialueiden laajennus, Hi/Lo:n jaettu potti |
+| `public/js/script.js` | Simulaattorin käyttöliittymä |
+| `public/js/ranges.js` | Käsialueiden säätimet ja ponnahdusikkuna; hakee alueen avaimet |
+| `public/js/rankings.js` | Rankingsivu: taulukko, käsihaku, detaljipaneeli, aluechart |
 | `public/js/i18n.js` | Käyttöliittymätekstien katalogit (fi/en); kieli tulee `<html lang>`-attribuutista |
 | `public/js/theme.js` | Vaalean ja tumman tilan valinta; ladataan `<head>`:ssä ennen sivun piirtoa |
 | `public/js/poker-worker.js` | Simulaatio selaimen Web Workerissa (ensisijainen laskentapolku) |
-| `server.js` | Express-palvelin: staattiset tiedostot, `POST /simulate` -varapolku, `GET /preflop` |
+| `server.js` | Express-palvelin: staattiset tiedostot, `POST /simulate` -varapolku, `/preflop`- ja `/rankings`-reitit |
 | `worker.js` | Palvelimen worker-säie, joka ajaa simulaation (requiroi `public/js/engine.js`) |
+| `preflopTables.js` | Esilaskettujen taulukoiden lataus, välimuisti ja top-X %:n alueet |
+| `handSearch.js`, `canonical.js` | Käsihaun kyselykieli ja käsiluokkien kanoniset avaimet |
+| `rangeHandsCache.js` | Laajennettujen käsialueiden välimuisti palvelimen `/simulate`-polulle |
+| `trustProxy.js` | Luotettujen käänteisproxyjen lista (`TRUST_PROXY_IPS`) |
 | `pokerUtils.js` | Kortin validointi ja legacy-apurit (poker-evaluator vain vanhassa eräajopolussa) |
+| `scripts/` | Taulukoiden eräajot (eksakti ja hybridi) ja niiden varmennukset; yhteiset apurit `batchCommon.js` |
 
 Simulaatio ajetaan ensisijaisesti selaimessa. Jos Web Worker ei ole
 käytettävissä tai se kaatuu, selain käyttää palvelimen `/simulate`-rajapintaa.
@@ -129,8 +153,21 @@ Rankingtaulukon selaus ja osittaiskäsihaku (`/rankingit` käyttää tätä):
 sulkuryhmät (`(AJ)(AJ)` = sama maa, eri ryhmät eri maissa), konkreettiset
 maat (`AsKs`), hold'emissa `AKs`/`AKo`. Vastausriveillä on sija
 epävarmuusväleineen (`rank`, `rankLow`, `rankHigh`), `equity`, `se`,
-`combos` ja kombopainotettu `topPct`. Koko taulukon saa CSV:nä:
+`combos` ja kombopainotettu `topPct`; Hi/Lo-riveillä lisäksi `hiEquity`,
+`loEquity`, `hiWin`, `hiTie`, `loWin` ja `loTie`. Koko taulukon saa CSV:nä:
 `/rankings/csv?gameType=…&players=…`.
+
+## Muut reitit
+
+| Reitti | Vastaus |
+|---|---|
+| `GET /preflop?gameType=…&players=…&hand=As,Ks` | Heron esilaskettu preflop-equity tuntemattomia vastustajia vastaan: `equity`, `exact` (tarkka vai hybridi), `standardError`, sija epävarmuusväleineen ja `topPct`; Hi/Lo:ssa myös hi/lo-osuudet ja puoliskojen taajuudet |
+| `GET /preflop/available` | Mille pelimuoto–pelaajamäärä-yhdistelmille taulukko on olemassa |
+| `GET /rankings/hand?gameType=…&key=…` | Yksi käsiluokka kaikilla pelaajamäärillä; Hi/Lo:ssa lisäksi `scoop`, `partPot`, `quarter`, `scoopedOn`, `lowMade` ja `nutLow` |
+| `GET /rankings/range?gameType=…&players=…&pct=…[&keys=1]` | Top-X %:n alueen luokka- ja kombomäärät sekä heikoin mukana oleva käsi; `keys=1` palauttaa myös luokka-avaimet |
+
+Pelimuoto (`gameType`) on aina `holdem`, `omaha`, `omaha5` tai `omahahilo`.
+Virhevastauksissa on koneluettava `code`-kenttä, jonka käyttöliittymä kääntää.
 
 ## Lisenssi ja siteeraus
 
