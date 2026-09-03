@@ -1,5 +1,6 @@
 const { parentPort, workerData } = require('worker_threads');
 const PokerEngine = require('./public/js/engine');
+const { isGameType, gameOf } = require('./public/js/games');
 
 try {
     const { playerHandsData, simulationCount, gameType, randomOpponents } = workerData;
@@ -11,11 +12,11 @@ try {
     if (typeof simulationCount !== 'number' || simulationCount < 100 || simulationCount > 50000) {
         throw new Error('Invalid simulation count');
     }
-    if (gameType !== 'holdem' && gameType !== 'omaha' && gameType !== 'omaha5' && gameType !== 'omahahilo') {
+    if (!isGameType(gameType)) {
         throw new Error('Invalid game type');
     }
 
-    const cardsPerPlayer = gameType === 'holdem' ? 2 : (gameType === 'omaha5' ? 5 : 4);
+    const cardsPerPlayer = gameOf(gameType).cardsPerPlayer;
 
     if (randomOpponents) {
         const heroData = playerHandsData[0];
@@ -34,10 +35,29 @@ try {
         }
     }
 
+    // Käsialueet: pääprosessin välimuistista tullut puskuri kääritään
+    // Int32Arrayksi; muut laajennetaan avaimista SharedArrayBufferiin, joka
+    // palautetaan pääprosessille välimuistiin (jaettu muisti, ei kopiota).
+    // Jokainen pyyntö käynnistää uuden workerin, joten moottorin oma
+    // välimuisti ei koskaan osuisi.
+    const rangeHands = [];
+    for (const p of playerHandsData) {
+        if (!p) continue;
+        if (p.rangeHands instanceof SharedArrayBuffer) {
+            p.rangeHands = new Int32Array(p.rangeHands);
+        } else if (Array.isArray(p.rangeKeys) && p.rangeKeys.length > 0) {
+            const combos = PokerEngine.expandRangeKeys(p.rangeKeys, cardsPerPlayer);
+            const shared = new Int32Array(new SharedArrayBuffer(combos.byteLength));
+            shared.set(combos);
+            p.rangeHands = shared;
+            if (p.rangeId) rangeHands.push({ id: p.rangeId, buffer: shared.buffer });
+        }
+    }
+
     // Laskenta on yhteinen selaimen kanssa: public/js/engine.js
     const results = PokerEngine.runSimulation(workerData);
 
-    parentPort.postMessage({ results });
+    parentPort.postMessage({ results, rangeHands });
 
 } catch (error) {
     // Lähetä virheviesti turvallisesti - älä vuoda pinojälkeä.

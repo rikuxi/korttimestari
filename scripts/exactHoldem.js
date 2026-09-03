@@ -9,7 +9,7 @@
 // Käyttö:
 //   node scripts/exactHoldem.js [--workers 30] [--chunk 20000] [--limit N]
 
-const { Worker } = require('worker_threads');
+const { formatDuration, runPool } = require('./batchCommon');
 const fs = require('fs');
 const path = require('path');
 const os = require('os');
@@ -33,13 +33,6 @@ function parseArgs(argv) {
         else { console.error(`Tuntematon argumentti: ${argv[i]}`); process.exit(1); }
     }
     return o;
-}
-
-function formatDuration(ms) {
-    const s = Math.max(0, Math.round(ms / 1000));
-    const m = Math.floor(s / 60);
-    if (m > 0) return `${m}min ${s % 60}s`;
-    return `${s}s`;
 }
 
 /** 2 kortin colex-indeksi -> käsiluokan järjestysnumero */
@@ -83,45 +76,20 @@ async function runWorkers(opts, classOf, state) {
         });
     }
     console.log(`Palasia: ${chunks.length} (${opts.chunk} pöytää/palanen), workereita ${opts.workers}`);
-    const startTime = Date.now();
-    let next = 0, completed = 0, lastLog = 0;
-
-    await new Promise((resolve, reject) => {
-        let active = 0;
-        for (let w = 0; w < Math.min(opts.workers, chunks.length); w++) {
-            const worker = new Worker(path.join(__dirname, 'exactHoldemWorker.js'), {
-                workerData: { classOf }
-            });
-            active++;
-            const assign = () => {
-                if (next >= chunks.length) {
-                    worker.terminate();
-                    if (--active === 0) resolve();
-                    return;
-                }
-                worker.postMessage(chunks[next++]);
-            };
-            worker.on('message', (res) => {
-                for (let i = 0; i < N_CLASSES; i++) {
-                    state.win[i] += res.win[i];
-                    state.tie[i] += res.tie[i];
-                }
-                state.boardsDone += res.boards;
-                completed++;
-                const el = Date.now() - startTime;
-                if (el - lastLog > 3000 || completed === chunks.length) {
-                    lastLog = el;
-                    const eta = (el / completed) * (chunks.length - completed);
-                    console.log(`[${completed}/${chunks.length}] ${state.boardsDone.toLocaleString('fi-FI')} pöytää  ` +
-                        `kulunut ${formatDuration(el)}, jäljellä ~${formatDuration(eta)}`);
-                }
-                assign();
-            });
-            worker.on('error', (e) => { worker.terminate(); reject(e); });
-            assign();
+    const { elapsed } = await runPool({
+        workerFile: path.join(__dirname, 'exactHoldemWorker.js'),
+        workerData: { classOf },
+        chunks, workers: opts.workers, logEvery: 3000,
+        progress: () => `${state.boardsDone.toLocaleString('fi-FI')} pöytää`,
+        onResult: (res) => {
+            for (let i = 0; i < N_CLASSES; i++) {
+                state.win[i] += res.win[i];
+                state.tie[i] += res.tie[i];
+            }
+            state.boardsDone += res.boards;
         }
     });
-    console.log(`Laskenta valmis ${formatDuration(Date.now() - startTime)} aikana.`);
+    console.log(`Laskenta valmis ${formatDuration(elapsed)} aikana.`);
 }
 
 async function main() {

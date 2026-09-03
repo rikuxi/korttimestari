@@ -13,69 +13,13 @@ const { prepareBoard, createBuffers, REST, C2, C3, C4 } = require('./exactProtot
 
 const N_CLASSES = 16432;
 
-// Binomikertoimet koko pakalle (globaali colex-indeksointi luokkataulukkoon)
-const G2 = new Float64Array(53), G3 = new Float64Array(53), G4 = new Float64Array(53), G5 = new Float64Array(53);
-const G1 = new Float64Array(53);
-for (let n = 0; n <= 52; n++) {
-    G1[n] = n;
-    G2[n] = n >= 2 ? (n * (n - 1)) / 2 : 0;
-    G3[n] = n >= 3 ? (n * (n - 1) * (n - 2)) / 6 : 0;
-    G4[n] = n >= 4 ? (n * (n - 1) * (n - 2) * (n - 3)) / 24 : 0;
-    G5[n] = n >= 5 ? (n * (n - 1) * (n - 2) * (n - 3) * (n - 4)) / 120 : 0;
-}
-
-function unrank5(r) {
-    const c = new Int32Array(5);
-    const tbls = [G1, G2, G3, G4, G5];
-    for (let pos = 4; pos >= 0; pos--) {
-        const tbl = tbls[pos];
-        let n = pos;
-        while (n + 1 <= 52 && tbl[n + 1] <= r) n++;
-        c[pos] = n;
-        r -= tbl[n];
-    }
-    return c;
-}
-
-function nextCombination(c) {
-    for (let i = 0; i < 5; i++) {
-        const limit = i === 4 ? 52 : c[i + 1];
-        if (c[i] + 1 < limit) {
-            c[i]++;
-            for (let j = 0; j < i; j++) c[j] = j;
-            return true;
-        }
-    }
-    return false;
-}
+// Binomikertoimet (globaali colex-indeksointi luokkataulukkoon), pöytien
+// iteraattori ja xoshiro128** (batchCommon.js)
+const { BINOM, unrank5, nextCombination, makeRng } = require('./batchCommon');
+const { G2, G3, G4 } = BINOM;
 
 // --- xoshiro128** : jakso 2^128-1, riittää mihin tahansa ajokokoon ---------
 // (mulberry32:n jakso 2^32 loppuisi kesken - katso dokumentin kohta 4.2)
-
-function splitmix32(seed) {
-    let z = seed >>> 0;
-    return () => {
-        z = (z + 0x9E3779B9) | 0;
-        let t = z ^ (z >>> 16);
-        t = Math.imul(t, 0x21F0AAAD); t ^= t >>> 15;
-        t = Math.imul(t, 0x735A2D97);
-        return (t ^ (t >>> 15)) >>> 0;
-    };
-}
-
-function makeRng(seed) {
-    const sm = splitmix32(seed);
-    let s0 = sm(), s1 = sm(), s2 = sm(), s3 = sm();
-    if ((s0 | s1 | s2 | s3) === 0) s0 = 1;
-    const rotl = (x, k) => ((x << k) | (x >>> (32 - k))) >>> 0;
-    return function () {
-        const result = Math.imul(rotl(Math.imul(s1, 5) >>> 0, 7), 9) >>> 0;
-        const t = (s1 << 9) >>> 0;
-        s2 ^= s0; s3 ^= s1; s1 ^= s2; s0 ^= s3; s2 ^= t;
-        s3 = rotl(s3, 11);
-        return result;
-    };
-}
 
 // --- Työläisen tila ------------------------------------------------------
 

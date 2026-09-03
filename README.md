@@ -65,6 +65,7 @@ npm test           # testit (Noden sisäänrakennettu test runner)
 |---|---|---|
 | `PORT` | `3002` | Palvelimen portti |
 | `PREFLOP_CACHE_TABLES` | `10` | Taulukkovälimuistin budjetti Omaha5-kokoisina taulukoina (~40 MB heapia kpl). Oletus pitää kaikki 25 taulukkoa muistissa (mitattu ~600 MB RSS lämmityksen jälkeen). Muistiahtaassa ympäristössä rajaa voi pudottaa; alle 8:lla Omaha5:n käsivertailu alkaa lukea levyltä. |
+| `RANGE_CACHE_MB` | `96` | Laajennettujen käsialueiden (`rangePct`) välimuistin tavubudjetti megatavuina. Worker laajentaa alueen kerran jaettuun muistiin ja seuraavat `/simulate`-pyynnöt käyttävät sitä sellaisenaan (Omaha5 top 30 %: 386 ms → 98 ms). Yksi merkintä on enintään ~47 MB (Omaha5 top 90 %); `0` poistaa välimuistin käytöstä. |
 | `PREFLOP_PRELOAD` | päällä | Taulukoiden esilämmitys käynnistyksessä, ettei ensimmäinen kävijä maksa synkronisia levylatauksia. `off` poistaa käytöstä — käytä yhdessä matalan `PREFLOP_CACHE_TABLES`-arvon kanssa. |
 | `TRUST_PROXY_IPS` | Cloudflaren alueet | Luotetut käänteisproxyt: pilkulla tai välilyönnillä eroteltu lista osoitteita ja CIDR-alueita. Arvo `off` jättää `X-Forwarded-For`-otsakkeen huomiotta — käytä sitä kun palvelu **ei** ole proxyn takana, koska silloin otsake on väärennettävissä. Kelvoton arvo kaataa käynnistyksen. |
 

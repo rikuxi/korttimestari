@@ -47,8 +47,9 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function updatePlayersOptions() {
+        const maxPlayers = PokerGames.gameOf(state.gameType).maxPlayers;
         const counts = (available && available[state.gameType]) ||
-            (state.gameType === 'holdem' ? [2,3,4,5,6,7,8,9,10] : [2,3,4,5,6,7,8,9]);
+            Array.from({ length: maxPlayers - 1 }, (_, i) => i + 2);
         const current = state.players;
         playersSelect.innerHTML = '';
         for (const p of counts) {
@@ -106,12 +107,8 @@ document.addEventListener('DOMContentLoaded', () => {
         csvLink.href = `/rankings/csv?gameType=${state.gameType}&players=${state.players}`;
     }
 
-    const GAME_NAMES = {
-        holdem: "Hold'em", omaha: 'Omaha', omaha5: 'Omaha5', omahahilo: 'Omaha Hi/Lo'
-    };
-
     function renderMeta(data) {
-        const game = GAME_NAMES[state.gameType] || state.gameType;
+        const game = PokerGames.gameOf(state.gameType).name;
         let text = t('rk.meta', {
             game,
             players: data.players,
@@ -445,8 +442,9 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
+    // Sama top X % -sääntö kuin palvelimella ja simulaattorissa (games.js)
     function inRange(hand) {
-        return hand.topPct !== undefined && hand.topPct <= rangePct + 1e-9;
+        return PokerGames.inTopPct(hand.topPct, rangePct);
     }
 
     function paintChart(hands) {
@@ -638,7 +636,7 @@ document.addEventListener('DOMContentLoaded', () => {
     {
         const qs = new URLSearchParams(location.search);
         const g = qs.get('gameType');
-        if (['holdem', 'omaha', 'omaha5', 'omahahilo'].includes(g)) state.gameType = g;
+        if (PokerGames.isGameType(g)) state.gameType = g;
         const p = parseInt(qs.get('players'), 10);
         if (p >= 2 && p <= 10) state.players = p;
         const pct = parseInt(qs.get('pct'), 10);

@@ -69,17 +69,15 @@ document.addEventListener('DOMContentLoaded', () => {
     // Palvelin-fallbackin peruutus
     let serverAbortController = null;
 
-    // Helper to get cards per player based on game type
+    // Pelimuodon ominaisuudet tulevat rekisteristä (games.js)
     function getCardsPerPlayer() {
-        if (currentGameType === 'holdem') return 2;
-        if (currentGameType === 'omaha5') return 5;
-        return 4; // omaha ja omahahilo
+        return PokerGames.gameOf(currentGameType).cardsPerPlayer;
     }
 
     // Omaha Hi/Lo: potti jaetaan hi- ja low-puoliskoihin, joten tulokset
     // esitetään eri riveillä (scoop/osapotti + hi/lo-erittely)
     function isHiLoGame() {
-        return currentGameType === 'omahahilo';
+        return PokerGames.gameOf(currentGameType).hiLo;
     }
 
     /**
@@ -119,10 +117,8 @@ document.addEventListener('DOMContentLoaded', () => {
             + (cardsPerPlayer - 1) * gap + PADDING + SLACK);
     }
 
-    // Helper to get max players based on game type
     function getMaxPlayers() {
-        if (currentGameType === 'holdem') return 10;
-        return 9; // omaha ja omaha5
+        return PokerGames.gameOf(currentGameType).maxPlayers;
     }
 
     // Helper to check if random mode is active
@@ -1018,13 +1014,12 @@ document.addEventListener('DOMContentLoaded', () => {
 
         clearNotice();
         if (hasRanges) showNotice(t('sim.rangeNote', { list: describeRanges(playerHandsData) }));
-        // Karkea kestoarvio (mitatut yksikkökustannukset, selain ~1.5x Node).
-        // Omaha5 on ~80x Hold'emia raskaampi per kierros, joten sama
-        // kierrosmäärä voi olla 0.7 s tai lähes minuutin - isosta ajosta
+        // Karkea kestoarvio (mitatut yksikkökustannukset games.js:ssä, selain
+        // ~1.5x Node). Omaha5 on ~80x Hold'emia raskaampi per kierros, joten
+        // sama kierrosmäärä voi olla 0.7 s tai lähes minuutin - isosta ajosta
         // kerrotaan etukäteen eikä anneta sen yllättää.
-        const SIM_COST_PER_PLAYER = { holdem: 1.0e-7, omaha: 4.8e-6, omaha5: 8.0e-6, omahahilo: 6.5e-6 };
         const estSeconds = simulationCount * activePlayers.length *
-            SIM_COST_PER_PLAYER[currentGameType];
+            PokerGames.gameOf(currentGameType).simCost;
         if (estSeconds > 4) {
             showNotice(t('sim.bigRun', {
                 n: simulationCount.toLocaleString(locale),
@@ -1189,7 +1184,7 @@ document.addEventListener('DOMContentLoaded', () => {
      */
     async function fetchPreflopExact(playerHandsData, communityCards, rangeList) {
         if (!isRandomOpponentsMode()) return;
-        if (!['holdem', 'omaha', 'omaha5', 'omahahilo'].includes(currentGameType)) return;
+        if (!PokerGames.isGameType(currentGameType)) return;
 
         const hasBoard = (communityCards.flop && communityCards.flop.length > 0) ||
             communityCards.turn || communityCards.river;

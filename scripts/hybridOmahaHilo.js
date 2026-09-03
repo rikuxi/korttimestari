@@ -19,7 +19,7 @@
 // Ajon voi keskeyttää: checkpoint tallennetaan parin minuutin välein ja sama
 // komento jatkaa siitä mihin jäätiin.
 
-const { Worker } = require('worker_threads');
+const { formatDuration, runPool, chunkSeed } = require('./batchCommon');
 const fs = require('fs');
 const path = require('path');
 const os = require('os');
@@ -82,14 +82,6 @@ function parseArgs(argv) {
 
 const choose4 = n => n >= 4 ? (n * (n - 1) * (n - 2) * (n - 3)) / 24 : 0;
 
-function formatDuration(ms) {
-    const s = Math.max(0, Math.round(ms / 1000));
-    const h = Math.floor(s / 3600), m = Math.floor((s % 3600) / 60);
-    if (h > 0) return `${h}h ${m}min`;
-    if (m > 0) return `${m}min ${s % 60}s`;
-    return `${s}s`;
-}
-
 // --- Checkpoint --------------------------------------------------------
 
 // Kasvatetaan kun kerättävät sarjat muuttuvat, jottei vanha checkpoint
@@ -150,68 +142,39 @@ async function runWorkers(opts, classOf, state, checkpointPath) {
             chunk: id,
             startRank: start,
             count: Math.min(opts.chunk, state.totalBoards - start),
-            // Eri satunnaisvirta jokaiselle palaselle; xoshiro128**:n jakso
-            // 2^128 tekee päällekkäisyydestä käytännössä mahdotonta. Siemen
-            // riippuu vain palasen numerosta, joten checkpointista jatkaminen
-            // toistaa täsmälleen saman arvonnan.
-            seed: (0x9e3779b9 ^ Math.imul(id + 1, 0x85ebca6b)) >>> 0
+            // Siemen riippuu vain palasen numerosta, joten checkpointista
+            // jatkaminen toistaa täsmälleen saman arvonnan
+            seed: chunkSeed(id)
         });
     }
     if (chunks.length === 0) return 0;
 
     console.log(`Palasia laskettavana: ${chunks.length} (${opts.chunk} pöytää/palanen), workereita ${opts.workers}`);
-    const startTime = Date.now();
-    let next = 0, completed = 0, lastLog = 0, lastSave = Date.now();
-
-    await new Promise((resolve, reject) => {
-        let active = 0;
-        const workerCount = Math.min(opts.workers, chunks.length);
-        for (let w = 0; w < workerCount; w++) {
-            const worker = new Worker(path.join(__dirname, 'hybridOmahaHiloWorker.js'), {
-                workerData: {
-                    classOf, players: opts.players,
-                    configs: opts.configs, replicates: opts.replicates
-                }
-            });
-            active++;
-            const assign = () => {
-                if (next >= chunks.length) {
-                    worker.terminate();
-                    if (--active === 0) resolve();
-                    return;
-                }
-                worker.postMessage(chunks[next++]);
-            };
-            worker.on('message', (res) => {
-                for (let r = 0; r < opts.replicates; r++) {
-                    const sr = res.rep[r], dr = state.rep[r];
-                    for (let i = 0; i < dr.length; i++) dr[i] += sr[i];
-                    const sf = res.frq[r], df = state.frq[r];
-                    for (let i = 0; i < df.length; i++) df[i] += sf[i];
-                }
-                state.done.add(res.chunk);
-                state.boardsDone += res.boards;
-                state.lowBoards += res.lowBoards;
-                completed++;
-
-                const el = Date.now() - startTime;
-                if (el - lastLog > 5000 || completed === chunks.length) {
-                    lastLog = el;
-                    const eta = (el / completed) * (chunks.length - completed);
-                    console.log(`[${completed}/${chunks.length}] ${state.boardsDone.toLocaleString('fi-FI')} pöytää  ` +
-                        `kulunut ${formatDuration(el)}, jäljellä ~${formatDuration(eta)}`);
-                }
-                if (checkpointPath && Date.now() - lastSave > 120000) {
-                    lastSave = Date.now();
-                    saveCheckpoint(checkpointPath, state, opts);
-                }
-                assign();
-            });
-            worker.on('error', (e) => { worker.terminate(); reject(e); });
-            assign();
+    let lastSave = Date.now();
+    const { elapsed } = await runPool({
+        workerFile: path.join(__dirname, 'hybridOmahaHiloWorker.js'),
+        workerData: {
+            classOf, players: opts.players,
+            configs: opts.configs, replicates: opts.replicates
+        },
+        chunks, workers: opts.workers,
+        progress: () => `${state.boardsDone.toLocaleString('fi-FI')} pöytää`,
+        onResult: (res) => {
+            for (let r = 0; r < opts.replicates; r++) {
+                const sr = res.rep[r], dr = state.rep[r];
+                for (let i = 0; i < dr.length; i++) dr[i] += sr[i];
+                const sf = res.frq[r], df = state.frq[r];
+                for (let i = 0; i < df.length; i++) df[i] += sf[i];
+            }
+            state.done.add(res.chunk);
+            state.boardsDone += res.boards;
+            state.lowBoards += res.lowBoards;
+            if (checkpointPath && Date.now() - lastSave > 120000) {
+                lastSave = Date.now();
+                saveCheckpoint(checkpointPath, state, opts);
+            }
         }
     });
-    const elapsed = Date.now() - startTime;
     console.log(`Laskenta valmis ${formatDuration(elapsed)} aikana.`);
     return elapsed;
 }

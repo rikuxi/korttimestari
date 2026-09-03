@@ -28,7 +28,6 @@ window.RangeUI = (function () {
 
     const { t, locale } = window.I18N;
     const CHART_RANKS = ['A', 'K', 'Q', 'J', 'T', '9', '8', '7', '6', '5', '4', '3', '2'];
-    const EPS = 1e-9;
 
     const controls = new Map();     // pelaajaindeksi -> { wrapper, slider, label }
     const handsCache = new Map();   // 'holdem:6' -> Promise<hands[]>
@@ -79,7 +78,8 @@ window.RangeUI = (function () {
         return rangeCache.get(key);
     }
 
-    const inRange = (hand, pct) => hand.topPct !== undefined && hand.topPct <= pct + EPS;
+    // Sama top X % -sääntö kuin palvelimella ja rankingsivulla (games.js)
+    const inRange = (hand, pct) => window.PokerGames.inTopPct(hand.topPct, pct);
 
     /**
      * Alueen tiedot yhtenäisessä muodossa:

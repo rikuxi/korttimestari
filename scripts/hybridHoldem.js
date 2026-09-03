@@ -15,7 +15,7 @@
 //
 // Heads-up lasketaan eksaktisti: scripts/exactHoldem.js
 
-const { Worker } = require('worker_threads');
+const { formatDuration, runPool, chunkSeed } = require('./batchCommon');
 const fs = require('fs');
 const path = require('path');
 const os = require('os');
@@ -55,14 +55,6 @@ function parseArgs(argv) {
 
 const choose2 = n => n >= 2 ? (n * (n - 1)) / 2 : 0;
 
-function formatDuration(ms) {
-    const s = Math.max(0, Math.round(ms / 1000));
-    const h = Math.floor(s / 3600), m = Math.floor((s % 3600) / 60);
-    if (h > 0) return `${h}h ${m}min`;
-    if (m > 0) return `${m}min ${s % 60}s`;
-    return `${s}s`;
-}
-
 async function runWorkers(opts, classOf, state) {
     const chunks = [];
     for (let start = 0; start < state.totalBoards; start += opts.chunk) {
@@ -70,56 +62,29 @@ async function runWorkers(opts, classOf, state) {
             chunk: start / opts.chunk,
             startRank: start,
             count: Math.min(opts.chunk, state.totalBoards - start),
-            // Eri satunnaisvirta jokaiselle palaselle; xoshiro128**:n jakso
-            // 2^128 tekee päällekkäisyydestä käytännössä mahdotonta
-            seed: (0x9e3779b9 ^ Math.imul(start / opts.chunk + 1, 0x85ebca6b)) >>> 0
+            seed: chunkSeed(start / opts.chunk)
         });
     }
 
     console.log(`Palasia: ${chunks.length}, workereita ${opts.workers}`);
-    const startTime = Date.now();
-    let next = 0, completed = 0, lastLog = 0;
-
-    await new Promise((resolve, reject) => {
-        let active = 0;
-        for (let w = 0; w < Math.min(opts.workers, chunks.length); w++) {
-            const worker = new Worker(path.join(__dirname, 'hybridHoldemWorker.js'), {
-                workerData: {
-                    classOf, players: opts.players,
-                    configs: opts.configs, replicates: opts.replicates
-                }
-            });
-            active++;
-            const assign = () => {
-                if (next >= chunks.length) {
-                    worker.terminate();
-                    if (--active === 0) resolve();
-                    return;
-                }
-                worker.postMessage(chunks[next++]);
-            };
-            worker.on('message', (res) => {
-                for (let r = 0; r < opts.replicates; r++) {
-                    const s = res.share[r], c = res.cnt[r];
-                    const S = state.share[r], C = state.cnt[r];
-                    for (let i = 0; i < N_CLASSES; i++) { S[i] += s[i]; C[i] += c[i]; }
-                }
-                state.boardsDone += res.boards;
-                completed++;
-                const el = Date.now() - startTime;
-                if (el - lastLog > 5000 || completed === chunks.length) {
-                    lastLog = el;
-                    const eta = (el / completed) * (chunks.length - completed);
-                    console.log(`[${completed}/${chunks.length}] ${state.boardsDone.toLocaleString('fi-FI')} pöytää  ` +
-                        `kulunut ${formatDuration(el)}, jäljellä ~${formatDuration(eta)}`);
-                }
-                assign();
-            });
-            worker.on('error', (e) => { worker.terminate(); reject(e); });
-            assign();
+    const { elapsed } = await runPool({
+        workerFile: path.join(__dirname, 'hybridHoldemWorker.js'),
+        workerData: {
+            classOf, players: opts.players,
+            configs: opts.configs, replicates: opts.replicates
+        },
+        chunks, workers: opts.workers,
+        progress: () => `${state.boardsDone.toLocaleString('fi-FI')} pöytää`,
+        onResult: (res) => {
+            for (let r = 0; r < opts.replicates; r++) {
+                const s = res.share[r], c = res.cnt[r];
+                const S = state.share[r], C = state.cnt[r];
+                for (let i = 0; i < N_CLASSES; i++) { S[i] += s[i]; C[i] += c[i]; }
+            }
+            state.boardsDone += res.boards;
         }
     });
-    console.log(`Laskenta valmis ${formatDuration(Date.now() - startTime)} aikana.`);
+    console.log(`Laskenta valmis ${formatDuration(elapsed)} aikana.`);
 }
 
 function main() {

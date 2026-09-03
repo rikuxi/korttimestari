@@ -17,67 +17,10 @@ const { eval5 } = require('../public/js/engine');
 const REST = 47;
 const N_PAIRS = (REST * (REST - 1)) / 2;   // 1 081
 
-// Binomikertoimet: paikkaindeksointi (0..46) ja korttien globaali colex (0..51)
-const C2 = new Int32Array(53), C3 = new Int32Array(53);
-const C4 = new Float64Array(53), C5 = new Float64Array(53);
-const C1 = new Int32Array(53);
-for (let n = 0; n <= 52; n++) {
-    C1[n] = n;
-    C2[n] = n >= 2 ? (n * (n - 1)) / 2 : 0;
-    C3[n] = n >= 3 ? (n * (n - 1) * (n - 2)) / 6 : 0;
-    C4[n] = n >= 4 ? (n * (n - 1) * (n - 2) * (n - 3)) / 24 : 0;
-    C5[n] = n >= 5 ? (n * (n - 1) * (n - 2) * (n - 3) * (n - 4)) / 120 : 0;
-}
-
-function unrank5(r) {
-    const c = new Int32Array(5);
-    const tbls = [C1, C2, C3, C4, C5];
-    for (let pos = 4; pos >= 0; pos--) {
-        const tbl = tbls[pos];
-        let n = pos;
-        while (n + 1 <= 52 && tbl[n + 1] <= r) n++;
-        c[pos] = n;
-        r -= tbl[n];
-    }
-    return c;
-}
-
-function nextCombination(c) {
-    for (let i = 0; i < 5; i++) {
-        const limit = i === 4 ? 52 : c[i + 1];
-        if (c[i] + 1 < limit) {
-            c[i]++;
-            for (let j = 0; j < i; j++) c[j] = j;
-            return true;
-        }
-    }
-    return false;
-}
-
-function splitmix32(seed) {
-    let z = seed >>> 0;
-    return () => {
-        z = (z + 0x9E3779B9) | 0;
-        let t = z ^ (z >>> 16);
-        t = Math.imul(t, 0x21F0AAAD); t ^= t >>> 15;
-        t = Math.imul(t, 0x735A2D97);
-        return (t ^ (t >>> 15)) >>> 0;
-    };
-}
-
-function makeRng(seed) {
-    const sm = splitmix32(seed);
-    let s0 = sm(), s1 = sm(), s2 = sm(), s3 = sm();
-    if ((s0 | s1 | s2 | s3) === 0) s0 = 1;
-    const rotl = (x, k) => ((x << k) | (x >>> (32 - k))) >>> 0;
-    return function () {
-        const result = Math.imul(rotl(Math.imul(s1, 5) >>> 0, 7), 9) >>> 0;
-        const t = (s1 << 9) >>> 0;
-        s2 ^= s0; s3 ^= s1; s1 ^= s2; s0 ^= s3; s2 ^= t;
-        s3 = rotl(s3, 11);
-        return result;
-    };
-}
+// Binomikertoimet: paikkaindeksointi (0..46) ja korttien globaali colex (0..51);
+// pöytien iteraattori, xoshiro128** ja pöydän kolmikot (batchCommon.js)
+const { BINOM, unrank5, nextCombination, makeRng, BOARD_TRIPLES } = require('./batchCommon');
+const { G1: C1, G2: C2, G3: C3, G4: C4, G5: C5 } = BINOM;
 
 const classOf = new Uint32Array(workerData.classOfBuffer);   // C(52,5) -> luokka
 const OPPONENTS = workerData.players - 1;
@@ -86,12 +29,6 @@ const HERO_POOL = REST - OPP_CARDS;
 const CONFIGS = workerData.configs;
 const REPLICATES = workerData.replicates;
 const N_CLASSES = workerData.classes;
-
-const BOARD_TRIPLES = (() => {
-    const t = [];
-    for (let i = 0; i < 5; i++) for (let j = i + 1; j < 5; j++) for (let k = j + 1; k < 5; k++) t.push(i, j, k);
-    return new Int32Array(t);
-})();
 
 const rest = new Int32Array(REST);
 const pairVal = new Int32Array(N_PAIRS);

@@ -14,7 +14,7 @@
 // Ajon voi keskeyttää: checkpoint tallennetaan minuutin välein ja sama
 // komento jatkaa siitä mihin jäätiin.
 
-const { Worker } = require('worker_threads');
+const { formatDuration, runPool } = require('./batchCommon');
 const fs = require('fs');
 const path = require('path');
 const os = require('os');
@@ -45,14 +45,6 @@ function parseArgs(argv) {
         else { console.error(`Tuntematon argumentti: ${argv[i]}`); process.exit(1); }
     }
     return o;
-}
-
-function formatDuration(ms) {
-    const s = Math.max(0, Math.round(ms / 1000));
-    const h = Math.floor(s / 3600), m = Math.floor((s % 3600) / 60);
-    if (h > 0) return `${h}h ${m}min`;
-    if (m > 0) return `${m}min ${s % 60}s`;
-    return `${s}s`;
 }
 
 // --- Luokkataulukko: 4 kortin colex-indeksi -> käsiluokan järjestysnumero ---
@@ -150,52 +142,26 @@ async function runWorkers(opts, classOf, state, checkpointPath) {
     if (chunks.length === 0) return;
 
     console.log(`Palasia laskettavana: ${chunks.length} (${opts.chunk} pöytää/palanen), workereita ${opts.workers}`);
-    const startTime = Date.now();
-    let next = 0, completed = 0, lastSave = Date.now(), lastLog = 0;
-
-    await new Promise((resolve, reject) => {
-        let active = 0;
-        const workerCount = Math.min(opts.workers, chunks.length);
-        for (let w = 0; w < workerCount; w++) {
-            const worker = new Worker(path.join(__dirname, 'exactOmahaWorker.js'), {
-                workerData: { classOf }
-            });
-            active++;
-            const assign = () => {
-                if (next >= chunks.length) {
-                    worker.terminate();
-                    if (--active === 0) resolve();
-                    return;
-                }
-                worker.postMessage(chunks[next++]);
-            };
-            worker.on('message', (res) => {
-                for (let i = 0; i < N_CLASSES; i++) {
-                    state.win[i] += res.win[i];
-                    state.tie[i] += res.tie[i];
-                }
-                state.done.add(res.chunk);
-                state.boardsDone += res.boards;
-                completed++;
-
-                const elapsed = Date.now() - startTime;
-                if (elapsed - lastLog > 5000 || completed === chunks.length) {
-                    lastLog = elapsed;
-                    const eta = (elapsed / completed) * (chunks.length - completed);
-                    console.log(`[${completed}/${chunks.length}] ${state.boardsDone.toLocaleString('fi-FI')} pöytää  ` +
-                        `kulunut ${formatDuration(elapsed)}, jäljellä ~${formatDuration(eta)}`);
-                }
-                if (Date.now() - lastSave > 60000) {
-                    lastSave = Date.now();
-                    saveCheckpoint(checkpointPath, state);
-                }
-                assign();
-            });
-            worker.on('error', (err) => { worker.terminate(); reject(err); });
-            assign();
+    let lastSave = Date.now();
+    const { elapsed } = await runPool({
+        workerFile: path.join(__dirname, 'exactOmahaWorker.js'),
+        workerData: { classOf },
+        chunks, workers: opts.workers,
+        progress: () => `${state.boardsDone.toLocaleString('fi-FI')} pöytää`,
+        onResult: (res) => {
+            for (let i = 0; i < N_CLASSES; i++) {
+                state.win[i] += res.win[i];
+                state.tie[i] += res.tie[i];
+            }
+            state.done.add(res.chunk);
+            state.boardsDone += res.boards;
+            if (Date.now() - lastSave > 60000) {
+                lastSave = Date.now();
+                saveCheckpoint(checkpointPath, state);
+            }
         }
     });
-    console.log(`Laskenta valmis ${formatDuration(Date.now() - startTime)} aikana.`);
+    console.log(`Laskenta valmis ${formatDuration(elapsed)} aikana.`);
 }
 
 // --- Tarkistukset ------------------------------------------------------

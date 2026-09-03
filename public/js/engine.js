@@ -18,6 +18,12 @@
 (function (global) {
     'use strict';
 
+    // Pelimuotorekisteri (kortit per pelaaja, hi/lo, kustannukset): selaimessa
+    // games.js on ladattu ennen tätä (script-tagi tai importScripts), Nodessa
+    // se requirataan
+    const Games = global.PokerGames || (typeof require === 'function' ? require('./games') : null);
+    if (!Games) throw new Error('games.js must be loaded before engine.js');
+
     const RANK_CHARS = '23456789TJQKA';
     const SUIT_CHARS = 'shdc';
 
@@ -510,12 +516,6 @@
         return Int32Array.from(out);
     }
 
-    function cardsPerPlayerFor(gameType) {
-        if (gameType === 'holdem') return 2;
-        if (gameType === 'omaha5') return 5;
-        return 4;   // omaha ja omahahilo
-    }
-
     /**
      * Monte Carlo -simulaatio.
      *
@@ -523,7 +523,7 @@
      * @param {Array<{hand: string[], isFolded: boolean}>} data.playerHandsData
      * @param {{flop: string[], turn: ?string, river: ?string}} data.communityCards
      * @param {number} data.simulationCount
-     * @param {string} data.gameType - 'holdem' | 'omaha' | 'omaha5'
+     * @param {string} data.gameType - games.js:n pelimuoto
      * @param {boolean} data.randomOpponents
      * @param {function(number)} [onProgress] - kutsutaan edistymisprosentilla
      */
@@ -543,9 +543,10 @@
     function prepare(data) {
         const { playerHandsData, communityCards, gameType, randomOpponents } = data;
         const playerCount = playerHandsData.length;
-        const cardsPerPlayer = cardsPerPlayerFor(gameType);
-        const isOmaha = gameType !== 'holdem';
-        const isHiLo = gameType === 'omahahilo';
+        const game = Games.gameOf(gameType);
+        const cardsPerPlayer = game.cardsPerPlayer;
+        const isOmaha = cardsPerPlayer > 2;
+        const isHiLo = game.hiLo;
         const holePairs = HOLE_PAIRS[cardsPerPlayer];
 
         // Pelaajan tila: 0 = ei mukana, 1 = kiinteä käsi, 2 = arvotaan
@@ -561,7 +562,11 @@
                 const c = cardToInt(s);
                 if (c >= 0) cards.push(c);
             }
-            const hasRange = Array.isArray(p.rangeKeys) && p.rangeKeys.length > 0;
+            // Alue joko luokka-avaimina (rangeKeys) tai valmiiksi laajennettuina
+            // komboina (rangeHands, Int32Array k korttia per käsi - palvelimen
+            // välimuisti antaa nämä)
+            const hasHands = p.rangeHands instanceof Int32Array && p.rangeHands.length > 0;
+            const hasRange = hasHands || (Array.isArray(p.rangeKeys) && p.rangeKeys.length > 0);
             const randomlyDealt = randomOpponents && i > 0 && !p.isFolded;
 
             if (!randomlyDealt) {
@@ -615,7 +620,8 @@
         for (let i = 0; i < playerCount; i++) {
             if (state[i] !== 3) continue;
             const p = playerHandsData[i];
-            const all = expandRangeCached(p.rangeKeys, cardsPerPlayer, p.rangeId);
+            const all = p.rangeHands instanceof Int32Array ? p.rangeHands
+                : expandRangeCached(p.rangeKeys, cardsPerPlayer, p.rangeId);
             const list = filterRange(all, cardsPerPlayer, deadSet);
             if (list.length === 0) throw rangeError('range_empty', 'Range has no possible hands');
             rangeLists[i] = list;
@@ -629,6 +635,8 @@
             state, fixedHands, knownBoard, deck, deckLen,
             boardNeeded, randomPlayers, need, active,
             rangePlayers, rangeLists, rangeCards,
+            // Eksaktin enumeroinnin hinta per pöytä per pelaaja (games.js)
+            exactCost: game.exactCost,
             // Alueiden erillisten yhdistelmien määrä, lasketaan kerran
             // tarvittaessa (rangeCombosOf)
             rangeCombos: null
@@ -715,7 +723,7 @@
      * @param {Array<{hand: string[], isFolded: boolean}>} data.playerHandsData
      * @param {{flop: string[], turn: ?string, river: ?string}} data.communityCards
      * @param {number} data.simulationCount
-     * @param {string} data.gameType - 'holdem' | 'omaha' | 'omaha5' | 'omahahilo'
+     * @param {string} data.gameType - games.js:n pelimuoto
      * @param {boolean} data.randomOpponents
      * @param {function(number)} [onProgress] - kutsutaan edistymisprosentilla
      * @param {object} [prepared] - prepare(data):n tulos, jos se on jo laskettu
@@ -933,14 +941,6 @@
         return Math.round(r);
     }
 
-    // Mitattu karkea hinta per pelaaja per pöytä (sekunteina)
-    const COST_HOLDEM = 3.5e-8;   // yksi eval7
-    const COST_OMAHA = 2.2e-6;    // 60 x eval5 (4 korttia: 6 paria x 10 kolmikkoa)
-    const COST_OMAHA5 = 3.7e-6;   // 100 x eval5 (5 korttia: 10 paria x 10 kolmikkoa)
-    // Hi + low: low-arviointi on maskioperaatioita eli paljon eval5:ttä
-    // halvempi, ja 40 % pöydistä ohittaa sen kokonaan
-    const COST_OMAHA_HILO = 3.0e-6;
-
     /**
      * Kertoo voiko tilanteen laskea tarkasti ja mitä se maksaisi.
      * @param {object} data - sama muoto kuin runSimulation
@@ -975,9 +975,8 @@
             return { feasible: false, reason: 'range-conflict', boards: 0, estimatedSeconds: 0 };
         }
         const boards = binomial(p.deckLen - p.rangeCards, p.boardNeeded) * rangeCombos;
-        const perBoard = p.active.length * (!p.isOmaha ? COST_HOLDEM
-            : p.isHiLo ? COST_OMAHA_HILO
-                : (p.cardsPerPlayer === 5 ? COST_OMAHA5 : COST_OMAHA));
+        // Mitattu karkea hinta per pelaaja per pöytä (games.js exactCost)
+        const perBoard = p.active.length * p.exactCost;
         return {
             feasible: p.active.length >= 2,
             reason: p.active.length < 2 ? 'single-player' : null,
@@ -1210,7 +1209,7 @@
     const PokerEngine = {
         cardToInt, intToCard, categoryOf,
         eval5, eval7, evalOmaha,
-        evalOmahaLow, NO_LOW,
+        evalOmahaLow, NO_LOW, LOW_BIT, POP8,
         HOLE_PAIRS, CATEGORY_NAMES,
         prepare, runSimulation, enumerateExact, exactPlan, binomial,
         expandRangeKeys, comboIndex

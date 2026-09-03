@@ -13,41 +13,9 @@ const REST = 47;
 const N_HANDS = (REST * (REST - 1)) / 2;   // 1 081 kättä pöydän jälkeen
 const N_OPP = (45 * 44) / 2;               // 990 vastustajakättä heron jälkeen
 
-// Binomikertoimet colex-indeksointiin
-const G1 = new Float64Array(53), G2 = new Float64Array(53), G3 = new Float64Array(53);
-const G4 = new Float64Array(53), G5 = new Float64Array(53);
-for (let n = 0; n <= 52; n++) {
-    G1[n] = n;
-    G2[n] = n >= 2 ? (n * (n - 1)) / 2 : 0;
-    G3[n] = n >= 3 ? (n * (n - 1) * (n - 2)) / 6 : 0;
-    G4[n] = n >= 4 ? (n * (n - 1) * (n - 2) * (n - 3)) / 24 : 0;
-    G5[n] = n >= 5 ? (n * (n - 1) * (n - 2) * (n - 3) * (n - 4)) / 120 : 0;
-}
-
-function unrank5(r) {
-    const c = new Int32Array(5);
-    const tbls = [G1, G2, G3, G4, G5];
-    for (let pos = 4; pos >= 0; pos--) {
-        const tbl = tbls[pos];
-        let n = pos;
-        while (n + 1 <= 52 && tbl[n + 1] <= r) n++;
-        c[pos] = n;
-        r -= tbl[n];
-    }
-    return c;
-}
-
-function nextCombination(c) {
-    for (let i = 0; i < 5; i++) {
-        const limit = i === 4 ? 52 : c[i + 1];
-        if (c[i] + 1 < limit) {
-            c[i]++;
-            for (let j = 0; j < i; j++) c[j] = j;
-            return true;
-        }
-    }
-    return false;
-}
+// Binomikertoimet colex-indeksointiin ja pöytien colex-iteraattori
+const { BINOM, unrank5, nextCombination } = require('./batchCommon');
+const { G2 } = BINOM;
 
 const classOf = workerData.classOf;   // Uint8Array(1326): 2 kortin colex -> luokka
 

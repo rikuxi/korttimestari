@@ -13,7 +13,7 @@
 //                                [--workers 30] [--chunk 2000] [--limit N]
 //                                [--max-minutes 0] [--restart]
 
-const { Worker } = require('worker_threads');
+const { formatDuration, runPool, chunkSeed } = require('./batchCommon');
 const fs = require('fs');
 const path = require('path');
 const os = require('os');
@@ -60,14 +60,6 @@ function parseArgs(argv) {
 }
 
 const choose5 = n => n >= 5 ? (n * (n - 1) * (n - 2) * (n - 3) * (n - 4)) / 120 : 0;
-
-function formatDuration(ms) {
-    const s = Math.max(0, Math.round(ms / 1000));
-    const h = Math.floor(s / 3600), m = Math.floor((s % 3600) / 60);
-    if (h > 0) return `${h}h ${m}min`;
-    if (m > 0) return `${m}min ${s % 60}s`;
-    return `${s}s`;
-}
 
 // --- Luokkataulukko -----------------------------------------------------
 //
@@ -212,7 +204,7 @@ async function runWorkers(opts, classOfBuffer, state, cpFile) {
                 chunk: c,
                 startRank: c * opts.chunk,
                 count: Math.min(opts.chunk, state.totalBoards - c * opts.chunk),
-                seed: (0x9e3779b9 ^ Math.imul(c + 1, 0x85ebca6b)) >>> 0
+                seed: chunkSeed(c)
             });
         }
     }
@@ -220,58 +212,33 @@ async function runWorkers(opts, classOfBuffer, state, cpFile) {
     if (pending.length === 0) return true;
 
     const startTime = Date.now();
-    const deadline = opts.maxMinutes > 0 ? startTime + opts.maxMinutes * 60000 : Infinity;
-    let next = 0, completed = 0, lastLog = 0, lastSave = Date.now(), stopped = false;
-
-    await new Promise((resolve, reject) => {
-        let active = 0;
-        for (let w = 0; w < Math.min(opts.workers, pending.length); w++) {
-            const worker = new Worker(path.join(__dirname, 'hybridOmaha5Worker.js'), {
-                workerData: {
-                    classOfBuffer, players: opts.players,
-                    configs: opts.configs, replicates: opts.replicates, classes: state.classes
-                }
-            });
-            active++;
-            const assign = () => {
-                if (next >= pending.length || Date.now() >= deadline) {
-                    if (Date.now() >= deadline) stopped = true;
-                    worker.terminate();
-                    if (--active === 0) resolve();
-                    return;
-                }
-                worker.postMessage(pending[next++]);
-            };
-            worker.on('message', (res) => {
-                for (let r = 0; r < opts.replicates; r++) {
-                    const s = res.share[r], c = res.cnt[r];
-                    const S = state.share[r], C = state.cnt[r];
-                    for (let i = 0; i < state.classes; i++) { S[i] += s[i]; C[i] += c[i]; }
-                }
-                state.done[res.chunk] = 1;
-                state.boardsDone += res.boards;
-                completed++;
-
-                const el = Date.now() - startTime;
-                if (el - lastLog > 10000 || completed === pending.length) {
-                    lastLog = el;
-                    const eta = (el / completed) * (pending.length - completed);
-                    console.log(`[${completed}/${pending.length}] ${state.boardsDone.toLocaleString('fi-FI')} pöytää  ` +
-                        `kulunut ${formatDuration(el)}, jäljellä ~${formatDuration(eta)}`);
-                }
-                if (Date.now() - lastSave > 120000) {
-                    lastSave = Date.now();
-                    saveCheckpoint(cpFile, opts, state);
-                }
-                assign();
-            });
-            worker.on('error', (e) => { worker.terminate(); reject(e); });
-            assign();
+    let lastSave = startTime;
+    const { elapsed, stopped } = await runPool({
+        workerFile: path.join(__dirname, 'hybridOmaha5Worker.js'),
+        workerData: {
+            classOfBuffer, players: opts.players,
+            configs: opts.configs, replicates: opts.replicates, classes: state.classes
+        },
+        chunks: pending, workers: opts.workers, logEvery: 10000,
+        deadline: opts.maxMinutes > 0 ? startTime + opts.maxMinutes * 60000 : Infinity,
+        progress: () => `${state.boardsDone.toLocaleString('fi-FI')} pöytää`,
+        onResult: (res) => {
+            for (let r = 0; r < opts.replicates; r++) {
+                const s = res.share[r], c = res.cnt[r];
+                const S = state.share[r], C = state.cnt[r];
+                for (let i = 0; i < state.classes; i++) { S[i] += s[i]; C[i] += c[i]; }
+            }
+            state.done[res.chunk] = 1;
+            state.boardsDone += res.boards;
+            if (Date.now() - lastSave > 120000) {
+                lastSave = Date.now();
+                saveCheckpoint(cpFile, opts, state);
+            }
         }
     });
 
     saveCheckpoint(cpFile, opts, state);
-    console.log(`Erä valmis ${formatDuration(Date.now() - startTime)} aikana.`);
+    console.log(`Erä valmis ${formatDuration(elapsed)} aikana.`);
     if (stopped) console.log('Aikaraja (--max-minutes) täyttyi.');
     return state.done.every(x => x === 1);
 }

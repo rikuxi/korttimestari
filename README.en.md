@@ -65,6 +65,7 @@ npm test           # tests (Node's built-in test runner)
 |---|---|---|
 | `PORT` | `3002` | Server port |
 | `PREFLOP_CACHE_TABLES` | `10` | Table cache budget in Omaha5-sized tables (~40 MB heap each). The default keeps all 25 tables in memory (measured ~600 MB RSS after warmup). Lower it in memory-constrained environments; below 8 the Omaha5 hand comparison starts re-reading from disk. |
+| `RANGE_CACHE_MB` | `96` | Byte budget in megabytes for the cache of expanded hand ranges (`rangePct`). The worker expands a range once into shared memory and later `/simulate` requests reuse it as is (Omaha5 top 30 %: 386 ms → 98 ms). A single entry is at most ~47 MB (Omaha5 top 90 %); `0` disables the cache. |
 | `PREFLOP_PRELOAD` | on | Warm the table cache at startup so the first visitor does not pay for synchronous disk loads. `off` disables it — use together with a low `PREFLOP_CACHE_TABLES`. |
 | `TRUST_PROXY_IPS` | Cloudflare ranges | Trusted reverse proxies: a comma- or space-separated list of addresses and CIDR ranges. The value `off` makes the server ignore `X-Forwarded-For` — use it when the service is **not** behind a proxy, since the header is spoofable there. An invalid value aborts startup. |
 

@@ -23,11 +23,13 @@
 
 const { keyToHand } = require('./canonical');
 const { cardToInt } = require('./public/js/engine');
+const { GAMES, GAME_TYPES } = require('./public/js/games');
 
 const RANK_CHARS = '23456789TJQKA';
 const SUIT_CHARS = 'shdc';
 
-const CPP = { holdem: 2, omaha: 4, omaha5: 5, omahahilo: 4 };
+// Käsikortteja per pelaaja pelimuodoittain (rekisteristä)
+const CPP = Object.fromEntries(GAME_TYPES.map(g => [g, GAMES[g].cardsPerPlayer]));
 
 /**
  * Kyselyvirhe koneluettavalla koodilla: UI kääntää koodin käyttäjän

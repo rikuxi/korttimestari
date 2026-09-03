@@ -48,97 +48,14 @@ const FRQ_SLOTS = 8;    // 8 x uint32 = 32 tavua
 const F_HIWIN = 0, F_HITIE = 1, F_LOWIN = 2, F_LOTIE = 3;
 const F_SCOOP = 4, F_NONE = 5, F_QUARTER = 6, F_HALF = 7;
 
-// Binomikertoimet koko pakalle (globaali colex-indeksointi luokkataulukkoon)
-const G1 = new Float64Array(53), G2 = new Float64Array(53);
-const G3 = new Float64Array(53), G4 = new Float64Array(53), G5 = new Float64Array(53);
-for (let n = 0; n <= 52; n++) {
-    G1[n] = n;
-    G2[n] = n >= 2 ? (n * (n - 1)) / 2 : 0;
-    G3[n] = n >= 3 ? (n * (n - 1) * (n - 2)) / 6 : 0;
-    G4[n] = n >= 4 ? (n * (n - 1) * (n - 2) * (n - 3)) / 24 : 0;
-    G5[n] = n >= 5 ? (n * (n - 1) * (n - 2) * (n - 3) * (n - 4)) / 120 : 0;
-}
-
-function unrank5(r) {
-    const c = new Int32Array(5);
-    const tbls = [G1, G2, G3, G4, G5];
-    for (let pos = 4; pos >= 0; pos--) {
-        const tbl = tbls[pos];
-        let n = pos;
-        while (n + 1 <= 52 && tbl[n + 1] <= r) n++;
-        c[pos] = n;
-        r -= tbl[n];
-    }
-    return c;
-}
-
-function nextCombination(c) {
-    for (let i = 0; i < 5; i++) {
-        const limit = i === 4 ? 52 : c[i + 1];
-        if (c[i] + 1 < limit) {
-            c[i]++;
-            for (let j = 0; j < i; j++) c[j] = j;
-            return true;
-        }
-    }
-    return false;
-}
+// Binomikertoimet (globaali colex-indeksointi luokkataulukkoon), pöytien
+// iteraattori, xoshiro128** ja pöydän kolmikot (batchCommon.js); low-koodaus
+// on sama kuin public/js/engine.js:ssä, taulukot tuodaan sieltä
+const { BINOM, unrank5, nextCombination, makeRng, BOARD_TRIPLES } = require('./batchCommon');
+const { NO_LOW, LOW_BIT, POP8 } = require('../public/js/engine');
+const { G2, G3, G4 } = BINOM;
 
 // --- xoshiro128** : jakso 2^128-1, riittää mihin tahansa ajokokoon ---------
-
-function splitmix32(seed) {
-    let z = seed >>> 0;
-    return () => {
-        z = (z + 0x9E3779B9) | 0;
-        let t = z ^ (z >>> 16);
-        t = Math.imul(t, 0x21F0AAAD); t ^= t >>> 15;
-        t = Math.imul(t, 0x735A2D97);
-        return (t ^ (t >>> 15)) >>> 0;
-    };
-}
-
-function makeRng(seed) {
-    const sm = splitmix32(seed);
-    let s0 = sm(), s1 = sm(), s2 = sm(), s3 = sm();
-    if ((s0 | s1 | s2 | s3) === 0) s0 = 1;
-    const rotl = (x, k) => ((x << k) | (x >>> (32 - k))) >>> 0;
-    return function () {
-        const result = Math.imul(rotl(Math.imul(s1, 5) >>> 0, 7), 9) >>> 0;
-        const t = (s1 << 9) >>> 0;
-        s2 ^= s0; s3 ^= s1; s1 ^= s2; s0 ^= s3; s2 ^= t;
-        s3 = rotl(s3, 11);
-        return result;
-    };
-}
-
-// --- Low-puolen taulukot -------------------------------------------------
-
-const NO_LOW = 0x100;
-
-// Kortin low-bitti, tai 0 jos kortti ei kelpaa low'hun (9..K)
-const LOW_BIT = (() => {
-    const t = new Int32Array(52);
-    for (let c = 0; c < 52; c++) {
-        const r = c >> 2;                       // 0 = kakkonen .. 12 = ässä
-        if (r === 12) t[c] = 1;                 // ässä on matalin
-        else if (r <= 6) t[c] = 1 << (r + 1);   // 2..8
-    }
-    return t;
-})();
-
-const POP8 = (() => {
-    const t = new Int32Array(256);
-    for (let i = 1; i < 256; i++) t[i] = t[i >> 1] + (i & 1);
-    return t;
-})();
-
-const BOARD_TRIPLES = (() => {
-    const t = [];
-    for (let i = 0; i < 5; i++)
-        for (let j = i + 1; j < 5; j++)
-            for (let k = j + 1; k < 5; k++) t.push(i, j, k);
-    return new Int32Array(t);
-})();
 
 // --- Työläisen tila ------------------------------------------------------
 

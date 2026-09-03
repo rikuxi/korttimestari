@@ -9,42 +9,9 @@ const { solveBoard, createBuffers, REST, N_HANDS, C2, C3, C4 } = require('./exac
 
 const N_CLASSES = 16432;
 
-// Binomikertoimet koko pakalle (0..52) - globaaliin colex-indeksointiin
-const G1 = new Float64Array(53), G2 = new Float64Array(53);
-const G3 = new Float64Array(53), G4 = new Float64Array(53), G5 = new Float64Array(53);
-for (let n = 0; n <= 52; n++) {
-    G1[n] = n;
-    G2[n] = n >= 2 ? (n * (n - 1)) / 2 : 0;
-    G3[n] = n >= 3 ? (n * (n - 1) * (n - 2)) / 6 : 0;
-    G4[n] = n >= 4 ? (n * (n - 1) * (n - 2) * (n - 3)) / 24 : 0;
-    G5[n] = n >= 5 ? (n * (n - 1) * (n - 2) * (n - 3) * (n - 4)) / 120 : 0;
-}
-
-/** Purkaa colex-sijaluvun 5 kortin pöydäksi (nouseva järjestys) */
-function unrank5(r) {
-    const c = new Int32Array(5);
-    for (let pos = 4; pos >= 0; pos--) {
-        const tbl = [G1, G2, G3, G4, G5][pos];
-        let n = pos;
-        while (n + 1 <= 52 && tbl[n + 1] <= r) n++;
-        c[pos] = n;
-        r -= tbl[n];
-    }
-    return c;
-}
-
-/** Seuraava 5-osajoukko colex-järjestyksessä. Palauttaa false kun loppu. */
-function nextCombination(c) {
-    for (let i = 0; i < 5; i++) {
-        const limit = i === 4 ? 52 : c[i + 1];
-        if (c[i] + 1 < limit) {
-            c[i]++;
-            for (let j = 0; j < i; j++) c[j] = j;
-            return true;
-        }
-    }
-    return false;
-}
+// Binomikertoimet koko pakalle (globaali colex-indeksointi) ja pöytien iteraattori
+const { BINOM, unrank5, nextCombination } = require('./batchCommon');
+const { G2, G3, G4 } = BINOM;
 
 const classOf = workerData.classOf;   // Uint16Array(270725): 4 kortin colex -> luokka
 const buf = createBuffers();

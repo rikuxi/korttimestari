@@ -32,6 +32,7 @@ const { Worker } = require('worker_threads');
 const fs = require('fs');
 const path = require('path');
 const os = require('os');
+const { formatDuration } = require('./batchCommon');
 const { enumerateHoldemCanonical, enumerateOmahaCanonical, describeOmahaKey } = require('../canonical');
 
 // --- Komentoriviargumentit ---------------------------------------------
@@ -111,16 +112,6 @@ function formatSims(sims) {
  * @param {number} ms
  * @returns {string}
  */
-function formatDuration(ms) {
-    const totalSec = Math.max(0, Math.round(ms / 1000));
-    const h = Math.floor(totalSec / 3600);
-    const m = Math.floor((totalSec % 3600) / 60);
-    const s = totalSec % 60;
-    if (h > 0) return `${h}h ${m}min`;
-    if (m > 0) return `${m}min ${s}s`;
-    return `${s}s`;
-}
-
 /**
  * Rakentaa CSV-sisällön ranking-taulukosta.
  * 'fi'  = puolipiste-erotin + desimaalipilkku + UTF-8 BOM (aukeaa suoraan

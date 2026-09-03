@@ -10,7 +10,8 @@
  * arvo saapuu omana viestinään kun se valmistuu.
  */
 
-importScripts('engine.js');
+// games.js (pelimuotorekisteri) ennen moottoria, joka lukee sen globaalista
+importScripts('games.js', 'engine.js');
 
 // Kuinka kauan tarkka laskenta saa kestää ennen kuin se jätetään väliin
 const EXACT_BUDGET_SECONDS = 10;

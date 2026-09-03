@@ -42,33 +42,10 @@ const LSTRIDE = 64;
 // kyselyt osuvat tasoille 0..RL, joten 11 riittäisi. 12 antaa varaa.
 const G_LEVELS = 12;
 
-const NO_LOW = 0x100;
-
-// Kortin low-bitti, tai 0 jos kortti ei kelpaa low'hun (9..K).
-// Sama koodaus kuin public/js/engine.js:ssä.
-const LOW_BIT = (() => {
-    const t = new Int32Array(52);
-    for (let c = 0; c < 52; c++) {
-        const r = c >> 2;                       // 0 = kakkonen .. 12 = ässä
-        if (r === 12) t[c] = 1;                 // ässä on matalin
-        else if (r <= 6) t[c] = 1 << (r + 1);   // 2..8
-    }
-    return t;
-})();
-
-const POP8 = (() => {
-    const t = new Int32Array(256);
-    for (let i = 1; i < 256; i++) t[i] = t[i >> 1] + (i & 1);
-    return t;
-})();
-
-const BOARD_TRIPLES = (() => {
-    const t = [];
-    for (let i = 0; i < 5; i++)
-        for (let j = i + 1; j < 5; j++)
-            for (let k = j + 1; k < 5; k++) t.push(i, j, k);
-    return new Int32Array(t);
-})();
+// Low-koodaus on sama kuin public/js/engine.js:ssä - taulukot tuodaan sieltä;
+// pöydän kolmikot batchCommon.js:stä
+const { NO_LOW, LOW_BIT, POP8 } = require('../public/js/engine');
+const { BOARD_TRIPLES } = require('./batchCommon');
 
 /** Hi/Lo-laskennan puskurit: hi-putken puskurit + low-puolen lisäykset */
 function createHiloBuffers() {
@@ -596,39 +573,8 @@ const { parentPort, workerData } = require('worker_threads');
 if (parentPort) {
     const N_CLASSES = 16432;
 
-    const G1 = new Float64Array(53), G2 = new Float64Array(53);
-    const G3 = new Float64Array(53), G4 = new Float64Array(53), G5 = new Float64Array(53);
-    for (let n = 0; n <= 52; n++) {
-        G1[n] = n;
-        G2[n] = n >= 2 ? (n * (n - 1)) / 2 : 0;
-        G3[n] = n >= 3 ? (n * (n - 1) * (n - 2)) / 6 : 0;
-        G4[n] = n >= 4 ? (n * (n - 1) * (n - 2) * (n - 3)) / 24 : 0;
-        G5[n] = n >= 5 ? (n * (n - 1) * (n - 2) * (n - 3) * (n - 4)) / 120 : 0;
-    }
-
-    const unrank5 = (r) => {
-        const c = new Int32Array(5);
-        for (let pos = 4; pos >= 0; pos--) {
-            const tbl = [G1, G2, G3, G4, G5][pos];
-            let n = pos;
-            while (n + 1 <= 52 && tbl[n + 1] <= r) n++;
-            c[pos] = n;
-            r -= tbl[n];
-        }
-        return c;
-    };
-
-    const nextCombination = (c) => {
-        for (let i = 0; i < 5; i++) {
-            const limit = i === 4 ? 52 : c[i + 1];
-            if (c[i] + 1 < limit) {
-                c[i]++;
-                for (let j = 0; j < i; j++) c[j] = j;
-                return true;
-            }
-        }
-        return false;
-    };
+    const { BINOM, unrank5, nextCombination } = require('./batchCommon');
+    const { G2, G3, G4 } = BINOM;
 
     const classOf = workerData.classOf;
     const buf = createHiloBuffers();

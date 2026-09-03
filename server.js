@@ -28,9 +28,11 @@ try {
 
 const PORT = process.env.PORT || 3002;
 
-// Tuetut pelimuodot - sama lista kaikille reiteille. Rankings-reitit
+// Tuetut pelimuodot ja niiden ominaisuudet tulevat rekisteristä
+// (public/js/games.js, sama tiedosto kuin selaimessa). Rankings-reitit
 // vastaavat 404 jos pelimuodolle ei ole vielä esilaskettua taulukkoa.
-const VALID_GAME_TYPES = ['holdem', 'omaha', 'omaha5', 'omahahilo'];
+const { GAME_TYPES: VALID_GAME_TYPES, MAX_PLAYERS_ANY, gameOf } = require('./public/js/games');
+const rangeHandsCache = require('./rangeHandsCache');
 
 // Käytä helmet konfiguroituna (yhdistetty CSP ja muut headerit)
 // HUOM: helmet ennen express.static, jotta turvaotsakkeet tulevat myös staattisille tiedostoille
@@ -155,12 +157,12 @@ app.get('/preflop', lookupLimiter, (req, res) => {
     }
 
     const players = parseInt(req.query.players, 10);
-    if (!Number.isInteger(players) || players < 2 || players > 10) {
+    if (!Number.isInteger(players) || players < 2 || players > MAX_PLAYERS_ANY) {
         return res.status(400).json({ error: 'Invalid player count', code: 'invalid_player_count' });
     }
 
     const hand = typeof req.query.hand === 'string' ? req.query.hand.split(',') : null;
-    const expected = gameType === 'holdem' ? 2 : (gameType === 'omaha5' ? 5 : 4);
+    const expected = gameOf(gameType).cardsPerPlayer;
     if (!Array.isArray(hand) || hand.length !== expected || !hand.every(isValidCard)) {
         return res.status(400).json({ error: 'Invalid hand' });
     }
@@ -200,7 +202,7 @@ app.get('/rankings', lookupLimiter, (req, res) => {
         return res.status(400).json({ error: 'Invalid game type', code: 'invalid_game_type' });
     }
     const players = parseInt(req.query.players, 10);
-    if (!Number.isInteger(players) || players < 2 || players > 10) {
+    if (!Number.isInteger(players) || players < 2 || players > MAX_PLAYERS_ANY) {
         return res.status(400).json({ error: 'Invalid player count', code: 'invalid_player_count' });
     }
     const offset = req.query.offset === undefined ? 0 : parseInt(req.query.offset, 10);
@@ -267,7 +269,7 @@ app.get('/rankings/range', lookupLimiter, (req, res) => {
         return res.status(400).json({ error: 'Invalid game type', code: 'invalid_game_type' });
     }
     const players = parseInt(req.query.players, 10);
-    if (!Number.isInteger(players) || players < 2 || players > 10) {
+    if (!Number.isInteger(players) || players < 2 || players > MAX_PLAYERS_ANY) {
         return res.status(400).json({ error: 'Invalid player count', code: 'invalid_player_count' });
     }
     const pct = parseFloat(req.query.pct);
@@ -310,14 +312,6 @@ app.get('/rankings/range', lookupLimiter, (req, res) => {
     });
 });
 
-// Kanonisen avaimen muoto pelimuodoittain (rankings-rivien 'key'-kenttä)
-const KEY_PATTERN = {
-    holdem: /^[2-9TJQKA]{2}[so]?$/,
-    omaha: /^([2-9TJQKA][shdc]){4}$/,
-    omaha5: /^([2-9TJQKA][shdc]){5}$/,
-    omahahilo: /^([2-9TJQKA][shdc]){4}$/
-};
-
 /**
  * Yksi käsiluokka kaikilla pelaajamäärillä - vertailunäkymää varten.
  * Kertoo miten sija ja equity muuttuvat pöydän täyttyessä (esim. AATT ds
@@ -330,11 +324,12 @@ app.get('/rankings/hand', lookupLimiter, (req, res) => {
         return res.status(400).json({ error: 'Invalid game type', code: 'invalid_game_type' });
     }
     const key = req.query.key;
-    if (typeof key !== 'string' || !KEY_PATTERN[gameType].test(key)) {
+    // Kanonisen avaimen muoto (rankings-rivien 'key'-kenttä) pelimuodoittain
+    if (typeof key !== 'string' || !gameOf(gameType).keyPattern.test(key)) {
         return res.status(400).json({ error: 'Invalid hand key', code: 'invalid_hand_key' });
     }
 
-    const maxPlayers = gameType === 'holdem' ? 10 : 9;
+    const maxPlayers = gameOf(gameType).maxPlayers;
     const byPlayers = [];
     let label, notation;
     for (let p = 2; p <= maxPlayers; p++) {
@@ -381,7 +376,7 @@ app.get('/rankings/csv', csvLimiter, (req, res) => {
         return res.status(400).json({ error: 'Invalid game type', code: 'invalid_game_type' });
     }
     const players = parseInt(req.query.players, 10);
-    if (!Number.isInteger(players) || players < 2 || players > 10) {
+    if (!Number.isInteger(players) || players < 2 || players > MAX_PLAYERS_ANY) {
         return res.status(400).json({ error: 'Invalid player count', code: 'invalid_player_count' });
     }
     const table = preflopTables.loadTable(gameType, players);
@@ -426,7 +421,7 @@ app.post('/simulate', apiLimiter, (req, res) => {
 
     // Rajoita pelaajamäärä pelimuodon mukaan (sama raja kuin selaimessa;
     // Omaha5:llä kortit eivät riitä 10 pelaajalle: 10*5 + 5 > 52)
-    const maxPlayers = gameType === 'holdem' ? 10 : 9;
+    const maxPlayers = gameOf(gameType).maxPlayers;
     if (req.body.playerHandsData.length < 2 || req.body.playerHandsData.length > maxPlayers) {
         return res.status(400).json({ error: `Player count must be between 2 and ${maxPlayers} for ${gameType}` });
     }
@@ -464,7 +459,7 @@ app.post('/simulate', apiLimiter, (req, res) => {
     }
     
     // Validate player cards
-    const cardsPerPlayer = gameType === 'holdem' ? 2 : (gameType === 'omaha5' ? 5 : 4);
+    const cardsPerPlayer = gameOf(gameType).cardsPerPlayer;
     for (let i = 0; i < req.body.playerHandsData.length; i++) {
         const player = req.body.playerHandsData[i];
         
@@ -546,8 +541,13 @@ app.post('/simulate', apiLimiter, (req, res) => {
                     // käyttöliittymän ilmoitus kattaa molemmat
                     return res.status(400).json({ error: `Player ${i + 1} range is empty`, code: 'range_empty' });
                 }
-                entry.rangeKeys = range.keys;
                 entry.rangeId = `${gameType}:${activePlayers}:${pct}`;
+                // Laajennettu alue välimuistista (SharedArrayBuffer, ei kopiota
+                // workeriin); muuten worker laajentaa avaimet ja palauttaa
+                // puskurin tänne seuraavia pyyntöjä varten
+                const cached = rangeHandsCache.get(entry.rangeId);
+                if (cached) entry.rangeHands = cached;
+                else entry.rangeKeys = range.keys;
             }
         }
         playerHandsData.push(entry);
@@ -586,7 +586,10 @@ app.post('/simulate', apiLimiter, (req, res) => {
             }
             return res.status(500).json({ error: result.error });
         }
-        res.json(result);
+        // Workerin laajentamat alueet talteen seuraavia pyyntöjä varten
+        const { rangeHands, ...payload } = result;
+        for (const { id, buffer } of rangeHands || []) rangeHandsCache.set(id, buffer);
+        res.json(payload);
     });
 
     worker.on('error', (error) => {

@@ -10,43 +10,24 @@
 const fs = require('fs');
 const path = require('path');
 const { canonicalizeHoldem, canonicalizeOmaha, canonicalizeOmaha5 } = require('./canonical');
+const { GAMES, GAME_TYPES, isGameType } = require('./public/js/games');
 
 const DATA_DIR = path.join(__dirname, 'data');
 
-// Ehdokastiedostot pelaajamäärää kohti, paremmuusjärjestyksessä. Puuttuva
-// tiedosto ohitetaan, joten uusi taulukko otetaan käyttöön pelkällä ajolla -
-// koodiin ei tarvitse koskea. Katso data/README.md.
+// Ehdokastiedostot pelaajamäärää kohti, paremmuusjärjestyksessä (päätteet
+// games.js:n tableSuffixes). Puuttuva tiedosto ohitetaan, joten uusi
+// taulukko otetaan käyttöön pelkällä ajolla - koodiin ei tarvitse koskea.
+// Katso data/README.md.
 function candidatesFor(gameType, players) {
-    if (gameType === 'omahahilo') {
-        return [
-            { file: `preflop-omahahilo-${players}max-exact.json`, exact: true },
-            { file: `preflop-omahahilo-${players}max-hybrid.json`, exact: false }
-        ];
-    }
-    if (gameType === 'omaha5') {
-        return [
-            { file: `preflop-omaha5-${players}max-exact.json`, exact: true },
-            { file: `preflop-omaha5-${players}max-hybrid.json`, exact: false }
-        ];
-    }
-    if (gameType === 'omaha') {
-        return [
-            { file: `preflop-omaha-${players}max-exact.json`, exact: true },
-            { file: `preflop-omaha-${players}max-hybrid.json`, exact: false }
-        ];
-    }
-    if (gameType === 'holdem') {
-        return [
-            { file: `preflop-holdem-${players}max-exact.json`, exact: true },
-            { file: `preflop-holdem-${players}max-hybrid.json`, exact: false },
-            { file: `preflop-holdem-${players}max-1m.json`, exact: false }
-        ];
-    }
-    return [];
+    if (!isGameType(gameType)) return [];
+    return GAMES[gameType].tableSuffixes.map(suffix => ({
+        file: `preflop-${gameType}-${players}max-${suffix}.json`,
+        exact: suffix === 'exact'
+    }));
 }
 
-const SUPPORTED_GAMES = ['holdem', 'omaha', 'omaha5', 'omahahilo'];
-const MAX_PLAYERS = { holdem: 10, omaha: 9, omaha5: 9, omahahilo: 9 };
+const SUPPORTED_GAMES = GAME_TYPES;
+const MAX_PLAYERS = Object.fromEntries(GAME_TYPES.map(g => [g, GAMES[g].maxPlayers]));
 
 const cache = new Map();
 
@@ -138,7 +119,7 @@ function loadTable(gameType, players) {
 
 /**
  * Hae esilaskettu preflop-equity.
- * @param {string} gameType - 'holdem' | 'omaha' | 'omaha5'
+ * @param {string} gameType - games.js:n pelimuoto
  * @param {number} players - pelaajien määrä (hero + vastustajat)
  * @param {string[]} hand - heron kortit
  * @returns {?object} - { equity, exact, standardError, rank, handClasses, source, label }
@@ -147,8 +128,9 @@ function lookup(gameType, players, hand) {
     const table = loadTable(gameType, players);
     if (!table) return null;
 
-    const key = gameType === 'holdem' ? canonicalizeHoldem(hand)
-        : gameType === 'omaha5' ? canonicalizeOmaha5(hand)
+    const cpp = GAMES[gameType].cardsPerPlayer;
+    const key = cpp === 2 ? canonicalizeHoldem(hand)
+        : cpp === 5 ? canonicalizeOmaha5(hand)
             : canonicalizeOmaha(hand);
     if (!key) return null;
 

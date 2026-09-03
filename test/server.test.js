@@ -4,6 +4,8 @@ const test = require('node:test');
 const assert = require('node:assert');
 const app = require('../server');
 const preflopTables = require('../preflopTables');
+const rangeHandsCache = require('../rangeHandsCache');
+const PokerEngine = require('../public/js/engine');
 
 let server;
 let baseUrl;
@@ -149,6 +151,44 @@ test('Omaha-perheen käsialue: keys=1 antaa avaimet, /simulate laajentaa ne palv
         const tightEq = (await tight.json()).results.equityPercentages[0];
         const looseEq = (await (await post(body(100))).json()).results.equityPercentages[0];
         assert.ok(tightEq < looseEq - 3, `${gameType}: top 5 % ${tightEq} vs. kaikki ${looseEq}`);
+    }
+});
+
+test('/simulate: laajennettu alue jää välimuistiin ja toinen pyyntö käyttää sitä', async () => {
+    // Ensimmäinen pyyntö: worker laajentaa avaimet SharedArrayBufferiin ja
+    // palauttaa sen pääprosessin välimuistiin; toinen pyyntö saa saman
+    // puskurin ilman laajennusta ja antaa saman muotoisen tuloksen
+    rangeHandsCache.clear();
+    const body = {
+        simulationCount: 2000, gameType: 'omaha', randomOpponents: true,
+        playerHandsData: [
+            { hand: ['7h', '2d', '9c', '4s'], isFolded: false },
+            { hand: [], isFolded: false, rangePct: 10 }
+        ],
+        communityCards: { flop: [], turn: null, river: null }
+    };
+    const first = await post(body);
+    assert.strictEqual(first.status, 200);
+    const firstJson = await first.json();
+    assert.strictEqual(firstJson.rangeHands, undefined, 'puskurit eivät kuulu vastaukseen');
+    const id = 'omaha:2:10';
+    assert.ok(rangeHandsCache.has(id), 'alue ei jäänyt välimuistiin');
+    const buffer = rangeHandsCache.get(id);
+    assert.ok(buffer instanceof SharedArrayBuffer);
+    // Puskurin sisältö on täsmälleen avainten laajennus
+    const keys = preflopTables.rangeKeys('omaha', 2, 10).keys;
+    const expanded = PokerEngine.expandRangeKeys(keys, 4);
+    assert.deepStrictEqual(Array.from(new Int32Array(buffer)), Array.from(expanded));
+
+    const second = await post(body);
+    assert.strictEqual(second.status, 200);
+    const secondJson = await second.json();
+    assert.strictEqual(secondJson.results.equityPercentages.length, 2);
+    assert.strictEqual(rangeHandsCache.size(), 1, 'sama alue ei saa tulla toiseen kertaan');
+    // Molemmat ajot vastaavat samaa asetelmaa: roskakäsi top 10 %:a vastaan
+    for (const r of [firstJson, secondJson]) {
+        assert.ok(r.results.equityPercentages[0] > 15 && r.results.equityPercentages[0] < 45,
+            `equity ${r.results.equityPercentages[0]}`);
     }
 });
 
