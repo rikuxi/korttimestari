@@ -1137,7 +1137,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const preflopCache = new Map();
 
     /** Näytä esilaskettu preflop-arvo tilastorivillä ja ilmoituksessa */
-    function renderPreflopInfo(data, rangeList) {
+    function renderPreflopInfo(data, rangeList, playerHandsData) {
         // Sija näytetään välinä jos keskivirhe ei riitä naulaamaan sitä:
         // esim. Omaha5:n keskivaiheilla todellinen sija voi olla ±sadat
         const fmt = n => n.toLocaleString(locale);
@@ -1167,6 +1167,19 @@ document.addEventListener('DOMContentLoaded', () => {
         const playerStats = document.getElementById('player0Stats');
         const el = playerStats && playerStats.querySelector('.exact-value');
         if (el) el.textContent = `${data.equity.toFixed(2)}%`;
+        // Vastustajat ovat kaikki satunnaisia käsiä eli keskenään symmetrisiä,
+        // joten kunkin tarkka equity on heron loppuosa jaettuna tasan.
+        // Voitto- ja tasapeliprosentteja symmetriasta ei saa.
+        const opponents = playerHandsData.filter((p, i) => i > 0 && !p.isFolded);
+        if (opponents.length > 0) {
+            const share = ((100 - data.equity) / opponents.length).toFixed(2);
+            playerHandsData.forEach((p, i) => {
+                if (i === 0 || p.isFolded) return;
+                const stats = document.getElementById(`player${i}Stats`);
+                const oppEl = stats && stats.querySelector('.exact-value');
+                if (oppEl) oppEl.textContent = `${share}%`;
+            });
+        }
         showNotice(data.exact
             ? t('sim.preflopExact', {
                 equity: data.equity.toFixed(4), rank: rankText, classes: fmt(data.handClasses), top
@@ -1203,7 +1216,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const cacheKey = `${currentGameType}:${players}:${heroCards.slice().sort().join(',')}`;
         if (preflopCache.has(cacheKey)) {
             const cached = preflopCache.get(cacheKey);
-            if (cached) renderPreflopInfo(cached, rangeList);
+            if (cached) renderPreflopInfo(cached, rangeList, playerHandsData);
             return;
         }
 
@@ -1226,7 +1239,7 @@ document.addEventListener('DOMContentLoaded', () => {
             const data = await response.json();
             preflopCache.set(cacheKey, data);
             if (runId !== currentRunId) return;   // uusi ajo ehti alkaa
-            renderPreflopInfo(data, rangeList);
+            renderPreflopInfo(data, rangeList, playerHandsData);
         } catch (e) {
             // Haku on lisätieto - jos se ei onnistu, simulaatio riittää
         }
@@ -1247,7 +1260,6 @@ document.addEventListener('DOMContentLoaded', () => {
      */
     function displayExact(result) {
         if (!lastPlayerHandsData) return;
-        const isRandomOpponents = isRandomOpponentsMode();
 
         lastPlayerHandsData.forEach((playerData, index) => {
             const playerStats = document.getElementById(`player${index}Stats`);
@@ -1255,11 +1267,7 @@ document.addEventListener('DOMContentLoaded', () => {
             const el = playerStats.querySelector('.exact-value');
             if (!el) return;
             // Käsialueen vastustajalle tarkka arvo näytetään kuten kiinteälle
-            if (playerData.isFolded || (isRandomOpponents && index > 0 && !(playerData.rangePct < 100))) {
-                el.textContent = '-';
-            } else {
-                el.textContent = `${result.equityPercentages[index].toFixed(2)}%`;
-            }
+            el.textContent = playerData.isFolded ? '-' : `${result.equityPercentages[index].toFixed(2)}%`;
         });
 
         showNotice(result.rangeCombos > 1
@@ -1269,7 +1277,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
     function displayResults(results, playerHandsData) {
         const { winCounts, tieCounts, winPercentages, tiePercentages, equityPercentages, simulationCount, heroHandStats } = results;
-        const isRandomOpponents = isRandomOpponentsMode();
 
         // Equity tulee laskentamoottorilta valmiina, koska jaetun potin osuus
         // on 1/voittajien määrä. Vanha kaava voitto + tasapeli/2 yliarvioi
@@ -1298,18 +1305,12 @@ document.addEventListener('DOMContentLoaded', () => {
                     playerStats.querySelector('.se-value').textContent = '-';
                     clearHiLo();
                     playerStats.querySelector('.mini-progress-bar').style.width = '0%';
-                } else if (isRandomOpponents && index > 0 && !(playerData.rangePct < 100)) {
-                    // Tuntemattomien vastustajien todennäköisyyksiä ei näytetä:
-                    // kädet vaihtuvat joka jaossa, joten prosentit eivät kerro mitään.
-                    // Käsialueen vastustajalle ne näytetään: "top 10 %:n käsi
-                    // voittaa X %" on mielekäs luku.
-                    playerStats.querySelector('.win-value').textContent = '-';
-                    playerStats.querySelector('.tie-value').textContent = '-';
-                    playerStats.querySelector('.equity-value').textContent = '-';
-                    playerStats.querySelector('.se-value').textContent = '-';
-                    clearHiLo();
-                    playerStats.querySelector('.mini-progress-bar').style.width = '0%';
                 } else {
+                    // Luvut näytetään myös tuntemattomille vastustajille: alue
+                    // 100 % on sama asia kuin satunnainen käsi, ja "satunnainen
+                    // käsi voittaa X %" on perustaso, johon säätimen muita arvoja
+                    // vertaa. Satunnaiset vastustajat ovat keskenään symmetrisiä,
+                    // joten ne näyttävät saman equityn otoskohinaa vaille.
                     const winPercent = winPercentages[index].toFixed(2);
                     const tiePercent = tiePercentages[index].toFixed(2);
                     const totalEquity = equityAt(index).toFixed(2);
