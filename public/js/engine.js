@@ -19,9 +19,15 @@
     'use strict';
 
     // Pelimuotorekisteri (kortit per pelaaja, hi/lo, kustannukset): selaimessa
-    // games.js on ladattu ennen tätä (script-tagi tai importScripts), Nodessa
-    // se requirataan
-    const Games = global.PokerGames || (typeof require === 'function' ? require('./games') : null);
+    // games.js ladataan ennen tätä (script-tagi tai importScripts), Nodessa
+    // se requirataan. Web Workerissa moottori hakee sen tarvittaessa itse:
+    // välimuistista voi tulla vanha poker-worker.js, joka ei tunne games.js:ää.
+    let Games = global.PokerGames;
+    if (!Games && typeof require === 'function') Games = require('./games');
+    if (!Games && typeof importScripts === 'function') {
+        importScripts('games.js');
+        Games = global.PokerGames;
+    }
     if (!Games) throw new Error('games.js must be loaded before engine.js');
 
     const RANK_CHARS = '23456789TJQKA';
