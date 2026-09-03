@@ -36,7 +36,6 @@ window.RangeUI = (function () {
     let getContext = () => ({ gameType: 'holdem', players: 2 });
     let onChange = () => {};
     let globalSlider = null;
-    let globalValue = null;
 
     const fmtNum = n => Number(n).toLocaleString(locale);
 
@@ -151,7 +150,7 @@ window.RangeUI = (function () {
         wrapper.appendChild(slider);
         container.appendChild(wrapper);
 
-        const c = { wrapper, slider, label, playerIndex };
+        const c = { wrapper, slider, label };
         controls.set(playerIndex, c);
         setControl(c, globalSlider ? parseInt(globalSlider.value, 10) : 100, false);
 
@@ -167,7 +166,6 @@ window.RangeUI = (function () {
         wrapper.addEventListener('pointerleave', () => scheduleHide());
         slider.addEventListener('focus', () => showPopover(c));
         slider.addEventListener('blur', () => scheduleHide());
-        return c;
     }
 
     function reset() {
@@ -178,7 +176,6 @@ window.RangeUI = (function () {
     /** Yhteinen säädin asetuksissa: asettaa kaikki vastustajat kerralla */
     function attachGlobal(slider, valueEl) {
         globalSlider = slider;
-        globalValue = valueEl;
         const paint = () => {
             const pct = parseInt(slider.value, 10);
             valueEl.textContent = labelText(pct);
@@ -199,7 +196,6 @@ window.RangeUI = (function () {
     let popoverChart = null;    // Hold'em-ruudukon solut avaimittain
     let popoverSeq = 0;
     let popoverTimer = null;
-    let popoverFor = null;
 
     function ensurePopover() {
         if (popover) return;
@@ -262,7 +258,6 @@ window.RangeUI = (function () {
     function showPopover(c) {
         ensurePopover();
         clearTimeout(hideTimer);
-        popoverFor = c;
         const pct = parseInt(c.slider.value, 10);
         const { gameType, players } = getContext();
         const head = popover.querySelector('.range-popover-head');
@@ -319,7 +314,6 @@ window.RangeUI = (function () {
         popoverSeq++;
         clearTimeout(popoverTimer);
         popover.hidden = true;
-        popoverFor = null;
     }
 
     // --- Simulaatiota varten ------------------------------------------------
@@ -330,13 +324,18 @@ window.RangeUI = (function () {
      * ei ole (status 404) tai haku epäonnistuu.
      */
     async function attachKeys(playerHandsData, gameType, players) {
+        // Vastustajien haut ovat riippumattomia, joten ne lähtevät rinnakkain;
+        // sama prosentti osuu lupausvälimuistiin eikä hakua toisteta
+        const pending = [];
         for (let i = 1; i < playerHandsData.length; i++) {
             const p = playerHandsData[i];
             if (p.isFolded || !(p.rangePct < 100)) continue;
-            const info = await resolve(gameType, players, p.rangePct);
-            p.rangeKeys = info.keys;
-            p.rangeId = `${gameType}:${players}:${p.rangePct}`;
+            pending.push(resolve(gameType, players, p.rangePct).then(info => {
+                p.rangeKeys = info.keys;
+                p.rangeId = `${gameType}:${players}:${p.rangePct}`;
+            }));
         }
+        await Promise.all(pending);
         return playerHandsData;
     }
 
@@ -345,6 +344,6 @@ window.RangeUI = (function () {
             if (gc) getContext = gc;
             if (oc) onChange = oc;
         },
-        mount, reset, pctFor, anyRange, attachGlobal, attachKeys, resolve, hidePopover
+        mount, reset, pctFor, anyRange, attachGlobal, attachKeys, hidePopover
     };
 })();

@@ -94,8 +94,8 @@ poker-evaluator-kirjastoa vasten kaikilla C(52,5) = 2 598 960 kädellä
 ```json
 {
   "simulationCount": 10000,
-  "gameType": "holdem | omaha | omaha5",
-  "randomOpponents": false,
+  "gameType": "holdem | omaha | omaha5 | omahahilo",
+  "randomOpponents": true,
   "playerHandsData": [
     { "hand": ["As", "Ks"], "isFolded": false },
     { "hand": [], "isFolded": false, "rangePct": 30 }
@@ -105,9 +105,14 @@ poker-evaluator-kirjastoa vasten kaikilla C(52,5) = 2 598 960 kädellä
 ```
 
 Kortit muodossa `<arvo><maa>`: arvo `2-9, T, J, Q, K, A`, maa `s, h, d, c`.
-`rangePct` (valinnainen, 0–100) rajaa tuntemattoman vastustajan kädet
+`rangePct` (valinnainen, 1–100) rajaa tuntemattoman vastustajan kädet
 aktiivisen pelaajamäärän preflop-rankingin parhaisiin X prosenttiin;
-palvelin ratkaisee alueen itse taulukosta. `GET /rankings/range?...&keys=1`
+palvelin ratkaisee alueen itse taulukosta. Kenttä vaikuttaa vain, kun
+`randomOpponents` on `true` ja pelaaja ei ole hero (ensimmäinen alkio):
+muualla se validoidaan mutta ohitetaan. Tyhjä alue (400, `range_empty`)
+tarkoittaa, ettei prosenttiin osu yhtään kättä tai että pöytä ja muiden
+kortit vievät kaikki sen kädet; `range_conflict` sitä, etteivät usean
+alueen kädet mahdu jakoon yhtä aikaa. `GET /rankings/range?...&keys=1`
 palauttaa saman alueen luokka-avaimet selaimen laskentaa varten.
 
 ## GET /rankings

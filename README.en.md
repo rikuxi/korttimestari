@@ -95,8 +95,8 @@ poker-evaluator library on all C(52,5) = 2,598,960 hands
 ```json
 {
   "simulationCount": 10000,
-  "gameType": "holdem | omaha | omaha5",
-  "randomOpponents": false,
+  "gameType": "holdem | omaha | omaha5 | omahahilo",
+  "randomOpponents": true,
   "playerHandsData": [
     { "hand": ["As", "Ks"], "isFolded": false },
     { "hand": [], "isFolded": false, "rangePct": 30 }
@@ -106,9 +106,14 @@ poker-evaluator library on all C(52,5) = 2,598,960 hands
 ```
 
 Cards use the format `<rank><suit>`: rank `2-9, T, J, Q, K, A`, suit
-`s, h, d, c`. `rangePct` (optional, 0–100) limits an unknown opponent to
+`s, h, d, c`. `rangePct` (optional, 1–100) limits an unknown opponent to
 the top X per cent of the preflop ranking for the active player count; the
-server resolves the range from its own table. `GET /rankings/range?...&keys=1`
+server resolves the range from its own table. The field only takes effect
+when `randomOpponents` is `true` and the player is not the hero (first
+entry); elsewhere it is validated but ignored. An empty range (400,
+`range_empty`) means no hand falls within the percentage, or the board and
+the other players' cards use up all of its hands; `range_conflict` means
+the hands of several ranges cannot be dealt at the same time. `GET /rankings/range?...&keys=1`
 returns the same range as class keys for in-browser computation.
 
 ## GET /rankings

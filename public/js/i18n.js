@@ -87,6 +87,7 @@ const I18N_CATALOGS = {
         'sim.rangeNoTable': 'Tälle pelaajamäärälle ei ole rankingtaulukkoa — käsialuetta ei voi käyttää.',
         'sim.rangeFetchFailed': 'Käsialueen haku epäonnistui.',
         'sim.rangeConflict': 'Valittuja käsialueita ei voi jakaa yhtä aikaa (liian kapeat alueet samoista käsistä).',
+        'sim.rangeEmpty': 'Käsialue on tyhjä: pöydän ja muiden pelaajien kortit vievät kaikki sen kädet.',
         'sim.rangeNote': 'Vastustajien käsialueet: {list}. Esilaskettua preflop-arvoa ei ole tälle asetelmalle.',
         'sim.rangeNoteRank': 'Vastustajien käsialueet: {list}. Heron käsi: {rank} / {classes} käsiluokasta, top {top} — ' +
             'HUOM: sija on ranking satunnaisia käsiä vastaan, ei valittua aluetta vastaan.',
@@ -139,6 +140,7 @@ const I18N_CATALOGS = {
         'apiError.simulation_failed': 'Simulaatio epäonnistui palvelimella.',
         'apiError.no_table': 'Tälle kokoonpanolle ei ole esilaskettua taulukkoa.',
         'apiError.range_conflict': 'Valittuja käsialueita ei voi jakaa yhtä aikaa (liian kapeat alueet samoista käsistä).',
+        'apiError.range_empty': 'Käsialue on tyhjä: valittuun prosenttiin ei osu yhtään kättä, tai pöydän ja muiden pelaajien kortit vievät kaikki sen kädet.',
         'apiError.invalid_range_pct': 'Käsialueen prosentti ei kelpaa.',
         'apiError.query_pair_suited': 'Pari ei voi olla suited eikä offsuit.',
         'apiError.query_bad_group': 'Sulkuryhmä on tyhjä tai sulkematta.',
@@ -218,6 +220,7 @@ const I18N_CATALOGS = {
         'sim.rangeNoTable': 'No ranking table exists for this player count — hand ranges are unavailable.',
         'sim.rangeFetchFailed': 'Fetching the hand range failed.',
         'sim.rangeConflict': 'The selected hand ranges cannot all be dealt at once (too narrow, built from the same hands).',
+        'sim.rangeEmpty': 'The hand range is empty: the board and the other players\' cards use up all of its hands.',
         'sim.rangeNote': 'Opponent hand ranges: {list}. No precomputed preflop value exists for this setup.',
         'sim.rangeNoteRank': "Opponent hand ranges: {list}. Hero's hand: {rank} of {classes} hand classes, top {top} — " +
             'NOTE: the rank is against random hands, not against the selected range.',
@@ -266,6 +269,7 @@ const I18N_CATALOGS = {
         'apiError.simulation_failed': 'The simulation failed on the server.',
         'apiError.no_table': 'No precomputed table exists for this configuration.',
         'apiError.range_conflict': 'The selected hand ranges cannot all be dealt at once (too narrow, built from the same hands).',
+        'apiError.range_empty': 'The hand range is empty: no hand falls within the chosen percentage, or the board and the other players\' cards use up all of its hands.',
         'apiError.invalid_range_pct': 'Invalid hand range percentage.',
         'apiError.query_pair_suited': 'A pair cannot be suited or offsuit.',
         'apiError.query_bad_group': 'Empty or unclosed group in the query.',

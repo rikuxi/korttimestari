@@ -193,7 +193,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 pokerWorker = new Worker('/js/poker-worker.js');
                 
                 pokerWorker.onmessage = function(e) {
-                    const { type, result, progress, error, runId } = e.data;
+                    const { type, result, progress, error, code, runId } = e.data;
 
                     // Vanhentuneen ajon viesti - uusi ajo on jo alkanut
                     if (runId !== currentRunId) return;
@@ -212,10 +212,10 @@ document.addEventListener('DOMContentLoaded', () => {
                         displayExact(result);
                     } else if (type === 'error') {
                         exactInFlight = false;
-                        if (/Ranges conflict|no possible hands/.test(String(error))) {
+                        if (code === 'range_conflict' || code === 'range_empty') {
                             // Käyttäjän asetus, ei laskentavika: palvelin
                             // päätyisi samaan
-                            showNotice(t('sim.rangeConflict'));
+                            showNotice(t(code === 'range_empty' ? 'sim.rangeEmpty' : 'sim.rangeConflict'));
                             finishSimulation();
                             return;
                         }
@@ -281,7 +281,10 @@ document.addEventListener('DOMContentLoaded', () => {
     // Peruuta käynnissä oleva simulaatio
     function cancelSimulation() {
         // Mitätöi myös lennossa olevat vastaukset (worker, /preflop-haku)
+        // ja kesken oleva käsialueiden avainhaku, joka muuten käynnistäisi
+        // ajon peruutuksen jälkeen
         currentRunId++;
+        rangeFetchToken++;
         exactInFlight = false;
         if (pokerWorker) {
             // terminate tappaa workerin kesken laskennan - luodaan uusi tilalle
@@ -536,6 +539,9 @@ document.addEventListener('DOMContentLoaded', () => {
         playersContainer.innerHTML = '';
         usedCards.clear();
         RangeUI.reset();
+        // Kesken oleva avainhaku koskee vanhaa pöytää: älä anna sen käynnistää
+        // ajoa uutta pöytää vasten
+        rangeFetchToken++;
         const allDeckCards = document.querySelectorAll('.deck-card');
         allDeckCards.forEach(card => card.classList.remove('used'));
         
@@ -896,16 +902,10 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
+    // Valitsimien liukuva korostus seuraa valittua vaihtoehtoa CSS:ssä
+    // (:has), joten tässä ei ylläpidetä luokkia
     opponentModeRadios.forEach(radio => {
-        radio.addEventListener('change', (e) => {
-            const radioGroup = e.target.closest('.radio-group');
-            if (e.target.value === 'random') {
-                radioGroup.classList.add('second-checked');
-            } else {
-                radioGroup.classList.remove('second-checked');
-            }
-            toggleRandomOpponentsMode();
-        });
+        radio.addEventListener('change', () => toggleRandomOpponentsMode());
     });
 
     function collectPlayerHands() {
@@ -989,9 +989,12 @@ document.addEventListener('DOMContentLoaded', () => {
         // Käsialueet: hae luokka-avaimet ennen ajoa (välimuistista heti
         // ensimmäisen jälkeen). Haku on asynkroninen, joten uusi käynnistys
         // sen aikana mitätöi tämän - muuten kaksi ajoa lähtisi peräkkäin.
+        // Token kasvatetaan jokaisella käynnistyksellä (myös ilman alueita),
+        // peruutuksella ja pöydän uudelleenrakennuksella, jotta odottava ajo
+        // ei koskaan lähde vanhentuneilla tiedoilla.
+        const token = ++rangeFetchToken;
         const hasRanges = isRandomOpponents && RangeUI.anyRange(playerHandsData);
         if (hasRanges) {
-            const token = ++rangeFetchToken;
             try {
                 await RangeUI.attachKeys(playerHandsData, currentGameType, activePlayers.length);
             } catch (e) {
@@ -1634,27 +1637,13 @@ document.addEventListener('DOMContentLoaded', () => {
     });
     
     gameTypeRadios.forEach(radio => {
-        radio.addEventListener('change', (e) => {
-            handleGameTypeChange();
-            const radioGroup = e.target.closest('.radio-group');
-            radioGroup.classList.remove('second-checked', 'third-checked', 'fourth-checked');
-            if (e.target.value === 'omaha') {
-                radioGroup.classList.add('second-checked');
-            } else if (e.target.value === 'omaha5') {
-                radioGroup.classList.add('third-checked');
-            } else if (e.target.value === 'omahahilo') {
-                radioGroup.classList.add('fourth-checked');
-            }
-        });
+        radio.addEventListener('change', () => handleGameTypeChange());
     });
     
     deckColorRadios.forEach(radio => { 
         radio.addEventListener('change', (e) => { 
             currentDeckColor = e.target.value; 
             updateDeckColors(currentDeckColor); 
-            const radioGroup = e.target.closest('.radio-group'); 
-            if (e.target.value === 'fourcolor') radioGroup.classList.add('second-checked'); 
-            else radioGroup.classList.remove('second-checked'); 
         }); 
     });
     
@@ -1666,17 +1655,6 @@ document.addEventListener('DOMContentLoaded', () => {
         initializePlayerInputs(); 
         checkMobileView();
         initWorker();
-        const radioGroups = document.querySelectorAll('.radio-group');
-        const omahaRadio = document.querySelector('input[name="gameType"][value="omaha"]');
-        const omaha5Radio = document.querySelector('input[name="gameType"][value="omaha5"]');
-        const omahaHiLoRadio = document.querySelector('input[name="gameType"][value="omahahilo"]');
-        if (omahaHiLoRadio && omahaHiLoRadio.checked) {
-            radioGroups[0].classList.add('fourth-checked');
-        } else if (omaha5Radio && omaha5Radio.checked) {
-            radioGroups[0].classList.add('third-checked');
-        } else if (omahaRadio && omahaRadio.checked) {
-            radioGroups[0].classList.add('second-checked');
-        }
         updateDeckColors(currentDeckColor);
     }
     

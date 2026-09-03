@@ -323,7 +323,10 @@ label {
     font-weight: bold;
 }
 
-select, input {
+/* Liukusäätimet jäävät ulkopuolelle: täyte ja reuna lyhentäisivät rataa
+   eikä nuppi yltäisi laitaan, joten jokainen säädin joutuisi kumoamaan
+   säännön erikseen */
+select, input:not([type="range"]) {
     padding: 8px;
     border: 1px solid var(--border);
     border-radius: 4px;
@@ -1031,7 +1034,10 @@ button.tertiary-button:disabled {
     font-weight: bold;
 }
 
-/* Background highlight for 2-option groups */
+/* Liukuva korostus valitun vaihtoehdon alla. Leveys johdetaan
+   vaihtoehtojen määrästä ja sijainti valitun labelin järjestysnumerosta
+   (:has), joten uusi vaihtoehto ei vaadi JS-luokkia eikä uusia sääntöjä
+   neljään asti. Oletus on kaksi vaihtoehtoa. */
 .background-highlight {
     position: absolute;
     z-index: 0;
@@ -1044,8 +1050,24 @@ button.tertiary-button:disabled {
     transition: transform 0.3s ease;
 }
 
-.radio-group.second-checked .background-highlight {
+.radio-group:has(.radio-label:nth-of-type(3):last-of-type) .background-highlight {
+    width: calc(100% / 3 - 2px);
+}
+
+.radio-group:has(.radio-label:nth-of-type(4):last-of-type) .background-highlight {
+    width: calc(25% - 2px);
+}
+
+.radio-group:has(.radio-label:nth-of-type(2) input:checked) .background-highlight {
     transform: translateX(100%);
+}
+
+.radio-group:has(.radio-label:nth-of-type(3) input:checked) .background-highlight {
+    transform: translateX(200%);
+}
+
+.radio-group:has(.radio-label:nth-of-type(4) input:checked) .background-highlight {
+    transform: translateX(300%);
 }
 
 /* Game type group - 4 options. Neljännekseen mahtuu "Omaha5" vain
@@ -1056,22 +1078,6 @@ button.tertiary-button:disabled {
 
 .radio-group.game-type-group .radio-label {
     padding: 6px 2px;
-}
-
-.radio-group.game-type-group .background-highlight {
-    width: calc(25% - 2px);
-}
-
-.radio-group.game-type-group.second-checked .background-highlight {
-    transform: translateX(100%);
-}
-
-.radio-group.game-type-group.third-checked .background-highlight {
-    transform: translateX(200%);
-}
-
-.radio-group.game-type-group.fourth-checked .background-highlight {
-    transform: translateX(300%);
 }
 
 
@@ -1381,14 +1387,9 @@ button.tertiary-button:disabled {
     color: var(--success);
 }
 
-/* Yleinen "select, input" -sääntö antaa 8 px paddingin ja reunan, jolloin
-   rata jää elementtiä lyhyemmäksi ja nuppi ei yllä oikeaan laitaan -
-   nollataan kuten rankingsivun säätimessä */
 .range-slider {
     width: 92%;
     margin: 0;
-    padding: 0;
-    border: none;
     accent-color: var(--btn-tertiary);
     cursor: pointer;
 }
@@ -1402,8 +1403,6 @@ button.tertiary-button:disabled {
 
 #rangeAll {
     width: 140px;
-    padding: 0;
-    border: none;
     accent-color: var(--btn-tertiary);
 }
 
@@ -2429,9 +2428,6 @@ button.example-chip:hover {
     flex: 1;
     min-width: 200px;
     max-width: 420px;
-    width: auto;
-    padding: 0;
-    border: none;
     accent-color: var(--green-text);
 }
 

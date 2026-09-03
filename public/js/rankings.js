@@ -346,12 +346,8 @@ document.addEventListener('DOMContentLoaded', () => {
     function setGameType(game) {
         state.gameType = game;
         const radio = document.querySelector(`input[name="gameType"][value="${game}"]`);
+        // Liukuva korostus seuraa valittua radiota CSS:ssä (:has)
         if (radio && !radio.checked) radio.checked = true;
-        const group = document.querySelector('.game-type-group');
-        group.classList.remove('second-checked', 'third-checked', 'fourth-checked');
-        if (game === 'omaha') group.classList.add('second-checked');
-        if (game === 'omaha5') group.classList.add('third-checked');
-        if (game === 'omahahilo') group.classList.add('fourth-checked');
         updatePlayersOptions();
     }
 

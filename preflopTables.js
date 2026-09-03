@@ -287,4 +287,4 @@ function warmCache(onDone) {
     })();
 }
 
-module.exports = { lookup, available, loadTable, warmCache, rangeSlice, rangeKeys };
+module.exports = { lookup, available, loadTable, warmCache, rangeSlice, rangeKeys, SUPPORTED_GAMES, MAX_PLAYERS };

@@ -238,6 +238,23 @@ test('hi/lo simulaatio osuu eksaktin luottamusvälille', () => {
             <= 2 * r.standardErrors[0]) within++;
     }
     assert.ok(within >= 15, within + '/' + runs + ' osui kahden keskivirheen sisään');
+
+    // Puoliskojen voitto- ja tasapelitaajuudet lasketaan simulaatiossa ja
+    // enumeroinnissa erillisissä koodilohkoissa: verrataan myös ne. Osuus
+    // p:n keskivirhe 40 000 kierroksella on enintään 0,25 %-yksikköä, joten
+    // 1,5 %-yksikköä on kuusi keskivirhettä.
+    const big = E.runSimulation({ ...table, gameType: 'omahahilo', simulationCount: 40000 });
+    for (const k of ['hiWinPercentages', 'hiTiePercentages', 'loWinPercentages', 'loTiePercentages']) {
+        assert.ok(Array.isArray(exact[k]) && Array.isArray(big[k]), k + ' puuttuu');
+        for (let i = 0; i < 2; i++) {
+            assert.ok(Math.abs(big[k][i] - exact[k][i]) < 1.5,
+                `${k}[${i}]: simulaatio ${big[k][i]} vs. eksakti ${exact[k][i]}`);
+        }
+    }
+    // KKJT ei voi voittaa low'ta (ei low-kortteja), A234 ei voi hävitä sitä
+    // kun low syntyy: taajuudet eivät ole pelkkää kohinaa
+    assert.strictEqual(exact.loWinPercentages[1], 0);
+    assert.ok(exact.loWinPercentages[0] > 0);
 });
 
 test('hi/lo: exactPlan tuntee pelimuodon ja satunnaisvastustajat toimivat', () => {

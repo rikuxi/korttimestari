@@ -39,11 +39,14 @@ test('budjetin ylittyessä häätyy pisimpään käyttämättä ollut', () => {
 });
 
 test('warmCache käy kaikki yhdistelmät läpi ja raportoi määrän', async () => {
-    // Hold'em 2-10 (9) + Omaha 2-9 (8) + Omaha5 2-9 (8) + Omaha Hi/Lo 2-9 (8).
-    // Hi/Lo:n taulukkotiedostoja ei vielä ole, mutta yhdistelmät käydään
-    // läpi silti - taulukot tulevat käyttöön pelkillä datatiedostoilla.
+    // Jokainen pelimuoto x pelaajamäärä 2..max (Hold'em 2-10, muut 2-9).
+    // Puuttuvatkin taulukot käydään läpi - ne tulevat käyttöön pelkillä
+    // datatiedostoilla. Odotusarvo johdetaan moduulin omista rajoista, jotta
+    // uusi pelimuoto ei riko testiä.
+    const expected = preflopTables.SUPPORTED_GAMES
+        .reduce((sum, g) => sum + (preflopTables.MAX_PLAYERS[g] - 1), 0);
     const count = await new Promise(resolve => preflopTables.warmCache(resolve));
-    assert.strictEqual(count, 33);
+    assert.strictEqual(count, expected);
     // Lämmityksen jälkeen haut osuvat välimuistiin budjetin rajoissa:
     // viimeisimmät taulukot palautuvat ilman uudelleenlatausta
     const warm = preflopTables.loadTable('omaha5', 9);

@@ -272,7 +272,7 @@ app.get('/rankings/range', lookupLimiter, (req, res) => {
     }
     const pct = parseFloat(req.query.pct);
     if (!Number.isFinite(pct) || pct <= 0 || pct > 100) {
-        return res.status(400).json({ error: 'pct must be between 0 and 100', code: 'invalid_pct' });
+        return res.status(400).json({ error: 'pct must be between 1 and 100', code: 'invalid_pct' });
     }
 
     const table = preflopTables.loadTable(gameType, players);
@@ -523,7 +523,9 @@ app.post('/simulate', apiLimiter, (req, res) => {
     // Käsialueet: vastustajalle voi antaa rangePct (1..100) = top-X %
     // pelaajamäärän preflop-rankingista. Avaimet ratkaistaan tässä
     // taulukosta - asiakkaan lähettämiä avainlistoja ei oteta vastaan.
-    // 100 = kaikki kädet = tavallinen satunnainen vastustaja.
+    // 100 = kaikki kädet = tavallinen satunnainen vastustaja. Kenttä
+    // koskee vain tuntemattomia vastustajia (randomOpponents: true, i > 0);
+    // muualla se validoidaan mutta ohitetaan (dokumentoitu README:ssä).
     const playerHandsData = [];
     const activePlayers = req.body.playerHandsData.filter(p => p && !p.isFolded).length;
     for (let i = 0; i < req.body.playerHandsData.length; i++) {
@@ -532,7 +534,7 @@ app.post('/simulate', apiLimiter, (req, res) => {
         const pct = player.rangePct;
         if (pct !== undefined && pct !== null) {
             if (!Number.isFinite(pct) || pct <= 0 || pct > 100) {
-                return res.status(400).json({ error: `Player ${i + 1} rangePct must be between 0 and 100`, code: 'invalid_range_pct' });
+                return res.status(400).json({ error: `Player ${i + 1} rangePct must be between 1 and 100`, code: 'invalid_range_pct' });
             }
             if (i > 0 && randomOpponents && !entry.isFolded && pct < 100) {
                 const range = preflopTables.rangeKeys(gameType, activePlayers, pct);
@@ -540,7 +542,9 @@ app.post('/simulate', apiLimiter, (req, res) => {
                     return res.status(404).json({ error: 'No precomputed table for this configuration', code: 'no_table' });
                 }
                 if (range.keys.length === 0) {
-                    return res.status(400).json({ error: `Player ${i + 1} range is empty`, code: 'empty_range' });
+                    // Sama koodi kuin moottorin tyhjenevällä alueella:
+                    // käyttöliittymän ilmoitus kattaa molemmat
+                    return res.status(400).json({ error: `Player ${i + 1} range is empty`, code: 'range_empty' });
                 }
                 entry.rangeKeys = range.keys;
                 entry.rangeId = `${gameType}:${activePlayers}:${pct}`;
@@ -576,7 +580,8 @@ app.post('/simulate', apiLimiter, (req, res) => {
             return;
         }
         if (result.error) {
-            if (result.code === 'range_conflict') {
+            if (result.code === 'range_conflict' || result.code === 'range_empty') {
+                // Käyttäjän asetus (ks. engine.js rangeError), ei palvelinvika
                 return res.status(400).json({ error: result.error, code: result.code });
             }
             return res.status(500).json({ error: result.error });

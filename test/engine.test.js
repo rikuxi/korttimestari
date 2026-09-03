@@ -592,11 +592,73 @@ test('range: mahdoton alue heittää virheen', () => {
         ],
         communityCards: empty
     };
-    // AsAh kuollut -> AA:sta jää vain AdAc, kahdelle pelaajalle ei riitä
-    assert.throws(() => E.runSimulation(data), /Ranges conflict/);
+    // AsAh kuollut -> AA:sta jää vain AdAc, kahdelle pelaajalle ei riitä.
+    // Virhekoodi kulkee workerien läpi käyttöliittymään: sitä testataan,
+    // ei viestitekstiä.
+    assert.throws(() => E.runSimulation(data), err => err.code === 'range_conflict' && /Ranges conflict/.test(err.message));
     // Valitut vastustajat -tila: kiinteä AdAc + range-pelaaja ilman kortteja
     const dead = { ...data, randomOpponents: false, playerHandsData: [{ hand: ['As', 'Ah'], isFolded: false }, { hand: ['Ad', 'Ac'], isFolded: false }, { hand: [], isFolded: false, rangeKeys: ['AA'] }] };
-    assert.throws(() => E.runSimulation(dead), /no possible hands/);
+    assert.throws(() => E.runSimulation(dead), err => err.code === 'range_empty' && /no possible hands/.test(err.message));
+    // Tyhjenevä alue myös satunnaiset vastustajat -tilassa (pöytä vie kombot)
+    const board = {
+        gameType: 'holdem', simulationCount: 1000, randomOpponents: true,
+        playerHandsData: [
+            { hand: ['As', 'Ah'], isFolded: false },
+            { hand: [], isFolded: false, rangeKeys: ['AA'] }
+        ],
+        communityCards: { flop: ['Ad', 'Ac', '7h'], turn: null, river: null }
+    };
+    assert.throws(() => E.runSimulation(board), err => err.code === 'range_empty');
+});
+
+test('prepare: jaettu valmisteltu tila antaa saman tuloksen kuin erilliset kutsut', () => {
+    // poker-worker.js valmistelee syötteen kerran ja antaa saman tilan
+    // simulaatiolle, suunnitelmalle ja enumeroinnille. Simulaatio sekoittaa
+    // pakkaa paikallaan ja kirjoittaa alueiden käsipuskureita, minkä ei saa
+    // vaikuttaa perässä tuleviin kutsuihin.
+    const data = {
+        gameType: 'holdem', simulationCount: 2000, randomOpponents: true,
+        playerHandsData: [
+            { hand: ['As', 'Kd'], isFolded: false },
+            { hand: [], isFolded: false, rangeKeys: ['QQ', 'JJ', 'AKs'] },
+            { hand: [], isFolded: false, rangeKeys: ['TT', '99'] }
+        ],
+        communityCards: { flop: ['2h', '7d', 'Jc'], turn: '3c', river: null }
+    };
+    const p = E.prepare(data);
+    const sim = E.runSimulation(data, null, p);
+    assert.strictEqual(sim.simulationCount, 2000);
+    const plan = E.exactPlan(data, p);
+    const planSeparate = E.exactPlan(data);
+    assert.deepStrictEqual(plan, planSeparate);
+    assert.ok(plan.feasible);
+    // Yhdistelmämäärä muistetaan tilassa eikä lasketa uudestaan
+    assert.strictEqual(p.rangeCombos, plan.rangeCombos);
+    const exact = E.enumerateExact(data, null, p);
+    const exactSeparate = E.enumerateExact(data);
+    assert.deepStrictEqual(exact, exactSeparate);
+    // Simulaatio osuu eksaktin lähelle myös jaetulla tilalla
+    assert.ok(Math.abs(sim.equityPercentages[0] - exact.equityPercentages[0]) < 4 * sim.standardErrors[0] + 0.5);
+});
+
+test('exactPlan: kaikki alueyhdistelmät törmäävät -> ei enumeroitavissa', () => {
+    // Hero AsAh, kaksi "pelkkä AA" -aluetta: kummallekin jää vain AdAc,
+    // joten erillisiä yhdistelmiä on nolla. Aiemmin exactPlan piti tätä
+    // toteutettavana ja enumerateExact jakoi nollalla (NaN-tulos).
+    const data = {
+        gameType: 'holdem', simulationCount: 10, randomOpponents: true,
+        playerHandsData: [
+            { hand: ['As', 'Ah'], isFolded: false },
+            { hand: [], isFolded: false, rangeKeys: ['AA'] },
+            { hand: [], isFolded: false, rangeKeys: ['AA'] }
+        ],
+        communityCards: empty
+    };
+    const plan = E.exactPlan(data);
+    assert.strictEqual(plan.feasible, false);
+    assert.strictEqual(plan.reason, 'range-conflict');
+    assert.strictEqual(plan.boards, 0);
+    assert.strictEqual(E.enumerateExact(data), null);
 });
 
 test('exactPlan: liian suuri alueiden tulojoukko ei ole enumeroitavissa', () => {
